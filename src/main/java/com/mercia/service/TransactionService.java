@@ -5,8 +5,9 @@ import java.time.Instant;
 
 import org.springframework.stereotype.Service;
 
-import com.mercia.exception.ExcessAmountException;
 import com.mercia.exception.UserNotFoundException;
+import com.mercia.model.LedgerEntryReason;
+import com.mercia.model.LedgerEntryType;
 import com.mercia.model.Status;
 import com.mercia.model.Transaction;
 import com.mercia.model.TransactionStatus;
@@ -30,6 +31,7 @@ public class TransactionService {
 	private final TransactionRepository transactionRepo;
 	private final UserRepository userRepo;
 	private final WalletRepository walletRepo;
+	private final LedgerService ledgerService;
 	
 	@Transactional
 	public void makeTransactionToOther(
@@ -102,6 +104,14 @@ public class TransactionService {
 	    transaction.setCreatedAt(now);
 	    transaction.setSettlementDueAt(now.plusSeconds(60));
 
+	    ledgerService.recordEntry(
+	    	    senderWallet,
+	    	    transaction,
+	    	    LedgerEntryType.DEBIT,
+	    	    LedgerEntryReason.TRANSFER,
+	    	    amount,
+	    	    "Transfer to recipient"
+	    	);
 	    transactionRepo.save(transaction);
 	}
 	
@@ -123,6 +133,14 @@ public class TransactionService {
 		BigDecimal addAmount = userWallet.getBalance().add(amount);
 		userWallet.setBalance(addAmount);
 		
+		ledgerService.recordEntry(
+			    userWallet,
+			    null,
+			    LedgerEntryType.CREDIT,
+			    LedgerEntryReason.DEPOSIT,
+			    amount,
+			    "Wallet deposit"
+			);
 		walletRepo.save(userWallet);
 		
 	}
@@ -148,6 +166,14 @@ public class TransactionService {
 		BigDecimal newBalance = userWallet.getBalance().subtract(amount);
 		userWallet.setBalance(newBalance);
 		
+		ledgerService.recordEntry(
+			    userWallet,
+			    null,
+			    LedgerEntryType.DEBIT,
+			    LedgerEntryReason.WITHDRAWAL,
+			    amount,
+			    "Wallet withdrawal"
+			);
 		walletRepo.save(userWallet);
 		
 	}

@@ -11,19 +11,19 @@ import lombok.Setter;
 
 @Entity
 @Table(
-    name = "transactions"
-//    uniqueConstraints = {
-//        @UniqueConstraint(
-//            name = "uk_transaction_request_id",
-//            columnNames = "request_id"
-//        )
-//    },
-//    indexes = {
-//        @Index(
-//            name = "idx_transaction_status_due",
-//            columnList = "status, settlement_due_at"
-//        )
-//    }
+    name = "transactions",
+    uniqueConstraints = {
+        @UniqueConstraint(
+            name = "uk_transaction_request_id",
+            columnNames = "request_id"
+        )
+    },
+    indexes = {
+        @Index(
+            name = "idx_transaction_status_due",
+            columnList = "status, settlement_due_at"
+        )
+    }
 )
 @Getter
 @Setter
@@ -49,8 +49,8 @@ public class Transaction {
     @Column(nullable = false, length = 20)
     private TransactionStatus status;
 
-//    @Column(name = "request_id", nullable = false, length = 100)
-//    private String requestId;
+    @Column(name = "request_id", nullable = false, length = 100)
+    private String requestId;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
