@@ -22,6 +22,7 @@ public class SecurityConfig {
 		auth.requestMatchers("/login").permitAll()
 		.requestMatchers("/register").permitAll()
 		.requestMatchers("/wallet/**").hasRole("USER")
+		.requestMatchers("/transactions/deposit", "/transactions/withdraw").hasRole("USER")
 		.requestMatchers("/hi").authenticated()
 		.anyRequest().authenticated());
 		return http.build();

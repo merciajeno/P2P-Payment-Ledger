@@ -11,6 +11,7 @@ export default defineConfig(({ mode }) => {
         "/login": env.VITE_API_PROXY_TARGET || "http://localhost:8080",
         "/register": env.VITE_API_PROXY_TARGET || "http://localhost:8080",
         "/wallet": env.VITE_API_PROXY_TARGET || "http://localhost:8080",
+        "/transactions": env.VITE_API_PROXY_TARGET || "http://localhost:8080",
       },
     },
   };

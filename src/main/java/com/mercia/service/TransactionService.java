@@ -12,15 +12,18 @@ import com.mercia.model.Transaction;
 import com.mercia.model.TransactionStatus;
 import com.mercia.model.User;
 import com.mercia.model.Wallet;
+import com.mercia.model.WalletStatus;
 import com.mercia.repository.TransactionRepository;
 import com.mercia.repository.UserRepository;
 import com.mercia.repository.WalletRepository;
 
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @AllArgsConstructor
+@Slf4j
 public class TransactionService {
 
 	private static final BigDecimal MinAmount = new BigDecimal(8000.0);
@@ -102,12 +105,21 @@ public class TransactionService {
 	    transactionRepo.save(transaction);
 	}
 	
+	@Transactional
 	public void depositMoney(String email,BigDecimal amount)
 	{
+		validatePositiveAmount(amount);
 		User user = userRepo.findByEmail(email)
 				.orElseThrow(()-> new UserNotFoundException("User not found. Check the email"));
+		validateActiveUser(user);
 		
 		Wallet userWallet = user.getWallet();
+		if (userWallet == null || userWallet.getBalance() == null) {
+			throw new IllegalStateException("Wallet not found");
+		}
+		if (userWallet.getWalletStatus() != WalletStatus.ACTIVE) {
+			throw new IllegalStateException("Wallet is not active");
+		}
 		BigDecimal addAmount = userWallet.getBalance().add(amount);
 		userWallet.setBalance(addAmount);
 		
@@ -115,16 +127,40 @@ public class TransactionService {
 		
 	}
 	
+	@Transactional
 	public void withdrawMoney(String email,BigDecimal amount)
 	{
+		validatePositiveAmount(amount);
 		User user = userRepo.findByEmail(email)
 				.orElseThrow(()-> new UserNotFoundException("User not found. Check the email"));
+		validateActiveUser(user);
 		
 		Wallet userWallet = user.getWallet();
-		BigDecimal addAmount = userWallet.getBalance().subtract(amount);
-		userWallet.setBalance(addAmount);
+		if (userWallet == null || userWallet.getBalance() == null) {
+			throw new IllegalStateException("Wallet not found");
+		}
+		if (userWallet.getWalletStatus() != WalletStatus.ACTIVE) {
+			throw new IllegalStateException("Wallet is not active");
+		}
+		if (userWallet.getBalance().compareTo(amount) < 0) {
+			throw new IllegalArgumentException("Insufficient balance");
+		}
+		BigDecimal newBalance = userWallet.getBalance().subtract(amount);
+		userWallet.setBalance(newBalance);
 		
 		walletRepo.save(userWallet);
 		
+	}
+
+	private void validatePositiveAmount(BigDecimal amount) {
+		if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+			throw new IllegalArgumentException("Amount must be greater than zero");
+		}
+	}
+
+	private void validateActiveUser(User user) {
+		if (user.getStatus() != Status.ACTIVE) {
+			throw new IllegalStateException("User account is not active");
+		}
 	}
 }
