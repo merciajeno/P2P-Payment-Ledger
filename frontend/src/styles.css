@@ -411,6 +411,13 @@ h1 span {
   letter-spacing: -1px;
 }
 
+.send-money-description {
+  margin: -12px 0 22px;
+  color: #999d9e;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
 .back-button {
   margin: 0 0 30px;
   padding: 0;

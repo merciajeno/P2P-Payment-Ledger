@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import AuthPage from "./components/AuthPage";
 import MainNavigation from "./components/MainNavigation";
+import SendMoney from "./components/SendMoney";
 import WalletActions from "./components/WalletActions";
 import WalletPage from "./components/WalletPage";
 import { fetchWalletBalance } from "./api";
@@ -63,7 +64,7 @@ function App() {
           setNotice(null);
           if (isAuthPage) {
             navigate("/wallet");
-          } else if (!["/wallet", "/manage-money"].includes(path)) {
+          } else if (!["/wallet", "/manage-money", "/send-money"].includes(path)) {
             navigate("/wallet");
           }
           return;
@@ -126,6 +127,12 @@ function App() {
         <section className="wallet-loading" role="status">Checking your session…</section>
       ) : isAuthenticated && path === "/manage-money" ? (
         <WalletActions
+          onBack={() => navigate("/wallet")}
+          onBalanceChange={setWalletBalance}
+          onSessionExpired={handleSessionExpired}
+        />
+      ) : isAuthenticated && path === "/send-money" ? (
+        <SendMoney
           onBack={() => navigate("/wallet")}
           onBalanceChange={setWalletBalance}
           onSessionExpired={handleSessionExpired}

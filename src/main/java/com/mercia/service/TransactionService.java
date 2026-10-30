@@ -2,6 +2,7 @@ package com.mercia.service;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.Optional;
 
 import org.springframework.stereotype.Service;
 
@@ -32,97 +33,115 @@ public class TransactionService {
 	private final UserRepository userRepo;
 	private final WalletRepository walletRepo;
 	private final LedgerService ledgerService;
-	
+	private final FraudDetectionService fraudDetectionService;
+
 	@Transactional
-	public void makeTransactionToOther(
-	        String senderEmail,
-	        String receiverEmail,
-	        BigDecimal amount) {
+	public Transaction makeTransactionToOther(String senderEmail, String receiverEmail, BigDecimal amount,
+			String requestId) {
 
-	    User sender = userRepo.findByEmail(senderEmail)
-	            .orElseThrow(() ->
-	                new UserNotFoundException("Sender not found"));
+		// 1. Validate request ID
+		if (requestId == null || requestId.isBlank()) {
+			throw new IllegalArgumentException("Request ID is required");
+		}
 
-	    User receiver = userRepo.findByEmail(receiverEmail)
-	            .orElseThrow(() ->
-	                new UserNotFoundException("Receiver not found"));
+		// 2. Check whether this payment request already exists
+		Optional<Transaction> existing = transactionRepo.findByRequestId(requestId);
 
-//	    if(amount.compareTo(MinAmount)==1)
-//	    {
-//	    	throw new ExcessAmountException("Amount is greater than 8000.Not accepted!!");
-//	    }
-	    // Validate users
-	    if (sender.getStatus() != Status.ACTIVE ||
-	        receiver.getStatus() != Status.ACTIVE) {
-	        throw new IllegalStateException(
-	                "Both users must be active");
-	    }
+		if (existing.isPresent()) {
+			Transaction previous = existing.get();
 
-	    if (sender.getId().equals(receiver.getId())) {
-	        throw new IllegalArgumentException(
-	                "Cannot transfer money to yourself");
-	    }
+			// Ensure the same ID isn't reused for a different payment
+			boolean samePayment = previous.getSenderWallet().getUser().getEmail().equals(senderEmail)
+					&& previous.getReceiverWallet().getUser().getEmail().equals(receiverEmail)
+					&& previous.getAmount().compareTo(amount) == 0;
 
-	    // Validate amount
-	    if (amount == null ||
-	        amount.compareTo(BigDecimal.ZERO) <= 0) {
-	        throw new IllegalArgumentException(
-	                "Amount must be greater than zero");
-	    }
+			if (!samePayment) {
+				throw new IllegalArgumentException("Request ID already used for a different payment");
+			}
 
-	    Wallet senderWallet = sender.getWallet();
-	    Wallet receiverWallet = receiver.getWallet();
+			// Return the original transaction; don't debit again
+			return previous;
+		}
 
-	    if (senderWallet == null || receiverWallet == null) {
-	        throw new IllegalStateException(
-	                "Wallet not found");
-	    }
+		// 3. Find users
+		User sender = userRepo.findByEmail(senderEmail)
+				.orElseThrow(() -> new UserNotFoundException("Sender not found"));
 
-	    // Check available balance
-	    if (senderWallet.getBalance().compareTo(amount) < 0) {
-	        throw new IllegalArgumentException(
-	                "Insufficient balance");
-	    }
+		User receiver = userRepo.findByEmail(receiverEmail)
+				.orElseThrow(() -> new UserNotFoundException("Receiver not found"));
 
-	    // Debit sender only
-	    BigDecimal newSenderBalance =
-	            senderWallet.getBalance().subtract(amount);
+		// 4. Validate users
+		if (sender.getStatus() != Status.ACTIVE || receiver.getStatus() != Status.ACTIVE) {
+			throw new IllegalStateException("Both users must be active");
+		}
 
-	    senderWallet.setBalance(newSenderBalance);
-	    walletRepo.save(senderWallet);
+		if (sender.getId().equals(receiver.getId())) {
+			throw new IllegalArgumentException("Cannot transfer money to yourself");
+		}
+      
+		// 5. Validate amount
+		if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+			throw new IllegalArgumentException("Amount must be greater than zero");
+		}
+		
+		//more than 8k
+		if(amount.compareTo(MinAmount) == 1) {
+			//idk
+		}
 
-	    // Create pending transaction
-	    Transaction transaction = new Transaction();
+		// 6. Get wallets
+		Wallet senderWallet = sender.getWallet();
+		Wallet receiverWallet = receiver.getWallet();
 
-	    transaction.setSenderWallet(senderWallet);
-	    transaction.setReceiverWallet(receiverWallet);
-	    transaction.setAmount(amount);
-	    transaction.setStatus(TransactionStatus.PENDING);
+		if (senderWallet == null || receiverWallet == null) {
+			throw new IllegalStateException("Wallet not found");
+		}
 
-	    Instant now = Instant.now();
+		fraudDetectionService.checkDuplicateTransfer(
+			    senderWallet.getId(),
+			    receiverWallet.getId(),
+			    amount
+			);
+		// 7. Check available balance
+		if (senderWallet.getBalance().compareTo(amount) < 0) {
+			throw new IllegalArgumentException("Insufficient balance");
+		}
 
-	    transaction.setCreatedAt(now);
-	    transaction.setSettlementDueAt(now.plusSeconds(60));
+		// 8. Debit sender only
+		senderWallet.setBalance(senderWallet.getBalance().subtract(amount));
 
-	    ledgerService.recordEntry(
-	    	    senderWallet,
-	    	    transaction,
-	    	    LedgerEntryType.DEBIT,
-	    	    LedgerEntryReason.TRANSFER,
-	    	    amount,
-	    	    "Transfer to recipient"
-	    	);
-	    transactionRepo.save(transaction);
+		walletRepo.save(senderWallet);
+
+		// 9. Create pending transaction
+		Instant now = Instant.now();
+
+		Transaction transaction = new Transaction();
+
+		transaction.setSenderWallet(senderWallet);
+		transaction.setReceiverWallet(receiverWallet);
+		transaction.setAmount(amount);
+		transaction.setRequestId(requestId);
+		transaction.setStatus(TransactionStatus.PENDING);
+		transaction.setCreatedAt(now);
+		transaction.setSettlementDueAt(now.plusSeconds(60));
+
+		// Save first so the transaction has a database ID
+		transactionRepo.save(transaction);
+
+		// 10. Create sender's debit ledger entry
+		ledgerService.recordEntry(senderWallet, transaction, LedgerEntryType.DEBIT, LedgerEntryReason.TRANSFER, amount,
+				"Transfer to " + receiverEmail);
+
+		return transaction;
 	}
-	
+
 	@Transactional
-	public void depositMoney(String email,BigDecimal amount)
-	{
+	public void depositMoney(String email, BigDecimal amount) {
 		validatePositiveAmount(amount);
 		User user = userRepo.findByEmail(email)
-				.orElseThrow(()-> new UserNotFoundException("User not found. Check the email"));
+				.orElseThrow(() -> new UserNotFoundException("User not found. Check the email"));
 		validateActiveUser(user);
-		
+
 		Wallet userWallet = user.getWallet();
 		if (userWallet == null || userWallet.getBalance() == null) {
 			throw new IllegalStateException("Wallet not found");
@@ -130,29 +149,23 @@ public class TransactionService {
 		if (userWallet.getWalletStatus() != WalletStatus.ACTIVE) {
 			throw new IllegalStateException("Wallet is not active");
 		}
+		
 		BigDecimal addAmount = userWallet.getBalance().add(amount);
 		userWallet.setBalance(addAmount);
-		
-		ledgerService.recordEntry(
-			    userWallet,
-			    null,
-			    LedgerEntryType.CREDIT,
-			    LedgerEntryReason.DEPOSIT,
-			    amount,
-			    "Wallet deposit"
-			);
+
+		ledgerService.recordEntry(userWallet, null, LedgerEntryType.CREDIT, LedgerEntryReason.DEPOSIT, amount,
+				"Wallet deposit");
 		walletRepo.save(userWallet);
-		
+
 	}
-	
+
 	@Transactional
-	public void withdrawMoney(String email,BigDecimal amount)
-	{
+	public void withdrawMoney(String email, BigDecimal amount) {
 		validatePositiveAmount(amount);
 		User user = userRepo.findByEmail(email)
-				.orElseThrow(()-> new UserNotFoundException("User not found. Check the email"));
+				.orElseThrow(() -> new UserNotFoundException("User not found. Check the email"));
 		validateActiveUser(user);
-		
+
 		Wallet userWallet = user.getWallet();
 		if (userWallet == null || userWallet.getBalance() == null) {
 			throw new IllegalStateException("Wallet not found");
@@ -165,17 +178,11 @@ public class TransactionService {
 		}
 		BigDecimal newBalance = userWallet.getBalance().subtract(amount);
 		userWallet.setBalance(newBalance);
-		
-		ledgerService.recordEntry(
-			    userWallet,
-			    null,
-			    LedgerEntryType.DEBIT,
-			    LedgerEntryReason.WITHDRAWAL,
-			    amount,
-			    "Wallet withdrawal"
-			);
+
+		ledgerService.recordEntry(userWallet, null, LedgerEntryType.DEBIT, LedgerEntryReason.WITHDRAWAL, amount,
+				"Wallet withdrawal");
 		walletRepo.save(userWallet);
-		
+
 	}
 
 	private void validatePositiveAmount(BigDecimal amount) {

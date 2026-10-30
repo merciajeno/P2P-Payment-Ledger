@@ -3,6 +3,7 @@ import BrandMark from "./BrandMark";
 export default function MainNavigation({ path, isAuthenticated, navigate, clearNotice }) {
   const isWalletPage = path === "/wallet";
   const isWalletActionsPage = path === "/manage-money";
+  const isSendMoneyPage = path === "/send-money";
 
   return (
     <header className="topbar">
@@ -41,6 +42,19 @@ export default function MainNavigation({ path, isAuthenticated, navigate, clearN
               Sign up
             </a>
           </>
+        )}
+        {isAuthenticated && (
+          <a
+            className={isSendMoneyPage ? "nav-link nav-link-active" : "nav-link"}
+            href="/send-money"
+            aria-current={isSendMoneyPage ? "page" : undefined}
+            onClick={(event) => {
+              event.preventDefault();
+              navigate("/send-money");
+            }}
+          >
+            Send money
+          </a>
         )}
         <a
           className={isWalletPage ? "nav-link nav-link-active" : "nav-link"}

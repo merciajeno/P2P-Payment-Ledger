@@ -9,7 +9,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.mercia.dto.AmountRequest;
 import com.mercia.dto.TransactionRequest;
+import com.mercia.dto.TransactionResponse;
 import com.mercia.exception.UserNotFoundException;
+import com.mercia.model.Transaction;
 import com.mercia.model.User;
 import com.mercia.repository.UserRepository;
 import com.mercia.service.TransactionService;
@@ -28,21 +30,22 @@ public class TransactionController {
     private final UserRepository userRepo;
 
     @PostMapping()
-    public ResponseEntity<String> makeTransactionToOther(
-            @RequestBody TransactionRequest request,
+    public ResponseEntity<TransactionResponse> makeTransactionToOther(
+            @Valid @RequestBody TransactionRequest request,
             Authentication authentication) {
 
-    	String username = authentication.getName();
-        String senderEmail = userRepo.findByName(username).get().getEmail();
-        log.debug("Sending from:"+senderEmail);
+        String senderEmail = getAuthenticatedEmail(authentication);
+        log.debug("Starting transfer for authenticated user");
 
-        transactionService.makeTransactionToOther(
+        Transaction transaction = transactionService.makeTransactionToOther(
                 senderEmail,
                 request.receiverEmail(),
-                request.amount()
+                request.amount(),
+                request.requestId()
         );
 
-        return ResponseEntity.ok("Transaction initiated successfully");
+        return ResponseEntity.ok(
+                new TransactionResponse(transaction.getRequestId(), transaction.getStatus()));
     }
     
     @PostMapping("/deposit")
