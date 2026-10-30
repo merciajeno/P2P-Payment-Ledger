@@ -12,4 +12,6 @@ public interface LedgerEntryRepository
     List<LedgerEntry> findByWalletIdOrderByCreatedAtDesc(Long walletId);
 
     List<LedgerEntry> findByTransactionId(Long transactionId);
+
+    List<LedgerEntry> findByTransactionIdOrderByCreatedAtAsc(Long transactionId);
 }

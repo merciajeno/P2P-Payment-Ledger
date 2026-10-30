@@ -25,7 +25,9 @@ public class SettlementService {
     private final TransactionRepository transactionRepo;
     private final WalletRepository walletRepo;
     private final LedgerService ledgerService;
+    private final DailyWalletSummaryService dailyWalletSummaryService;
 
+    @Transactional
     public void settleDueTransactions() {
 
         List<Transaction> transactions =
@@ -57,6 +59,12 @@ public class SettlementService {
         receiverWallet.setBalance(
             receiverWallet.getBalance().add(amount)
         );
+        
+     // Update daily incoming
+        dailyWalletSummaryService.recordIncoming(
+            receiverWallet,
+            amount
+        );
         walletRepo.save(receiverWallet);
 
         // Update transaction
@@ -75,6 +83,7 @@ public class SettlementService {
         );
     }
     
+    @Transactional
     private void declineAndRefund(Transaction transaction) {
 
         Wallet senderWallet = transaction.getSenderWallet();
@@ -84,6 +93,12 @@ public class SettlementService {
         senderWallet.setBalance(
             senderWallet.getBalance().add(amount)
         );
+        
+        //update it
+        dailyWalletSummaryService.recordIncoming(
+        	    senderWallet,
+        	    amount
+        	);
         walletRepo.save(senderWallet);
 
         // Update transaction

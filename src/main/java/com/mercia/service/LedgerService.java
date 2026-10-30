@@ -7,33 +7,25 @@ import org.springframework.stereotype.Service;
 import com.mercia.model.*;
 import com.mercia.repository.LedgerEntryRepository;
 
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class LedgerService {
 
     private final LedgerEntryRepository ledgerRepo;
 
-    public LedgerEntry recordEntry(
+    @Transactional
+    public void recordEntry(
             Wallet wallet,
             Transaction transaction,
             LedgerEntryType entryType,
             LedgerEntryReason reason,
             BigDecimal amount,
             String description) {
-
-        if (wallet == null) {
-            throw new IllegalArgumentException("Wallet cannot be null");
-        }
-
-        if (entryType == null || reason == null) {
-            throw new IllegalArgumentException("Entry type and reason are required");
-        }
-
-        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("Ledger amount must be positive");
-        }
 
         LedgerEntry entry = new LedgerEntry();
 
@@ -43,7 +35,7 @@ public class LedgerService {
         entry.setReason(reason);
         entry.setAmount(amount);
         entry.setDescription(description);
-
-        return ledgerRepo.save(entry);
+       log.info("saved into ledger");
+       ledgerRepo.save(entry);
     }
 }

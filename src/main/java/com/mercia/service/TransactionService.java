@@ -34,7 +34,8 @@ public class TransactionService {
 	private final WalletRepository walletRepo;
 	private final LedgerService ledgerService;
 	private final FraudDetectionService fraudDetectionService;
-
+    private final DailyWalletSummaryService dailyWalletSummaryService;
+    
 	@Transactional
 	public Transaction makeTransactionToOther(String senderEmail, String receiverEmail, BigDecimal amount,
 			String requestId) {
@@ -110,6 +111,11 @@ public class TransactionService {
 		// 8. Debit sender only
 		senderWallet.setBalance(senderWallet.getBalance().subtract(amount));
 
+		// Update daily outgoing
+		dailyWalletSummaryService.checkAndRecordOutgoing(
+		    senderWallet,
+		    amount
+		);
 		walletRepo.save(senderWallet);
 
 		// 9. Create pending transaction
@@ -155,6 +161,12 @@ public class TransactionService {
 
 		ledgerService.recordEntry(userWallet, null, LedgerEntryType.CREDIT, LedgerEntryReason.DEPOSIT, amount,
 				"Wallet deposit");
+		
+		dailyWalletSummaryService.recordIncoming(
+			    userWallet,
+			    amount
+			);
+		log.info("saved to wallet");
 		walletRepo.save(userWallet);
 
 	}
@@ -182,6 +194,10 @@ public class TransactionService {
 		ledgerService.recordEntry(userWallet, null, LedgerEntryType.DEBIT, LedgerEntryReason.WITHDRAWAL, amount,
 				"Wallet withdrawal");
 		walletRepo.save(userWallet);
+		dailyWalletSummaryService.checkAndRecordOutgoing(
+			    userWallet,
+			    amount
+			);
 
 	}
 
