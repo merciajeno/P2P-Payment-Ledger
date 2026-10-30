@@ -1,5 +1,6 @@
 package com.mercia.dto;
 
-public class TransactionRequest {
+import java.math.BigDecimal;
 
+public record TransactionRequest(String receiverEmail, BigDecimal amount) {
 }

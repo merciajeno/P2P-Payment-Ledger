@@ -12,10 +12,26 @@ public class MyGlobalExceptionHandler {
 	public ResponseEntity<String> userNotFound(UserNotFoundException ex) {
 		return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ex.getMessage());
 	}
-	
+
 	@ExceptionHandler(InvalidPasswordException.class)
-	public  ResponseEntity<String> invalidPassword(InvalidPasswordException ex)
-	{
+	public ResponseEntity<String> invalidPassword(InvalidPasswordException ex) {
 		return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
+	}
+
+	@ExceptionHandler(ExcessAmountException.class)
+	public ResponseEntity<String> excessAmount(ExcessAmountException ex) {
+		return ResponseEntity.badRequest().body(ex.getMessage());
+	}
+
+	@ExceptionHandler(IllegalArgumentException.class)
+	public ResponseEntity<String> handleIllegalArgument(IllegalArgumentException ex) {
+
+		return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
+	}
+
+	@ExceptionHandler(IllegalStateException.class)
+	public ResponseEntity<String> handleIllegalState(IllegalStateException ex) {
+
+		return ResponseEntity.status(HttpStatus.CONFLICT).body(ex.getMessage());
 	}
 }

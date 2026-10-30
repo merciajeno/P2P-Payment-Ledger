@@ -21,6 +21,7 @@ public class SecurityConfig {
 		.authorizeHttpRequests(auth->
 		auth.requestMatchers("/login").permitAll()
 		.requestMatchers("/register").permitAll()
+		.requestMatchers("/wallet/**").hasRole("USER")
 		.requestMatchers("/hi").authenticated()
 		.anyRequest().authenticated());
 		return http.build();

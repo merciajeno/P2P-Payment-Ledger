@@ -15,6 +15,7 @@ import com.mercia.service.JwtService;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.AllArgsConstructor;
@@ -33,16 +34,23 @@ public class JwtFilter extends OncePerRequestFilter{
 			throws ServletException, IOException {
 		// TODO Auto-generated method stub
 		log.debug("Incoming request: " + request.getMethod() + " " + request.getRequestURI());
-	    
-		String authHeader = request.getHeader("Authorization");
-		
-		if(authHeader==null || !authHeader.startsWith("Bearer "))
-		{
-			doFilter(request, response, filterChain);
+		String token = null;
+		Cookie[] cookies = request.getCookies();
+
+		if (cookies != null) {
+			for (Cookie cookie : cookies) {
+				if (cookie.getName().equals("token")) {
+					token = cookie.getValue();
+					break;
+				}
+			}
+		}
+		log.debug("Token:" + token);
+		if (token == null) {
+			filterChain.doFilter(request, response);
 			return;
 		}
 		
-		String token = authHeader.substring(7).trim();
 		String username = jwtService.extractUsername(token);
 		UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 		Authentication authentication = new UsernamePasswordAuthenticationToken(userDetails, null,

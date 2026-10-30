@@ -18,7 +18,7 @@ public class JwtService {
 	public String generateToken(String username) {
 
 		long now = System.currentTimeMillis();
-		return Jwts.builder().subject(username).issuedAt(new Date(now)).expiration(new Date(now + 1000 * 60 * 15))// 15
+		return Jwts.builder().subject(username).issuedAt(new Date(now)).expiration(new Date(now + 1000 * 60 * 30))// 30
 																													// minutes
 				.signWith(secretKey).compact();
 	}
