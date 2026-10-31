@@ -35,6 +35,7 @@ public class TransactionService {
 	private final LedgerService ledgerService;
 	private final FraudDetectionService fraudDetectionService;
     private final DailyWalletSummaryService dailyWalletSummaryService;
+    private final NotificationService notificationService;
     
 	@Transactional
 	public Transaction makeTransactionToOther(String senderEmail, String receiverEmail, BigDecimal amount,
@@ -88,6 +89,7 @@ public class TransactionService {
 		//more than 8k
 		if(amount.compareTo(MinAmount) == 1) {
 			//idk
+			
 		}
 
 		// 6. Get wallets
@@ -100,7 +102,9 @@ public class TransactionService {
 
 		fraudDetectionService.checkDuplicateTransfer(
 			    senderWallet.getId(),
-			    receiverWallet.getId()
+			    receiverWallet.getId(),
+			    senderWallet,
+			    amount
 			);
 		// 7. Check available balance
 		if (senderWallet.getBalance().compareTo(amount) < 0) {
@@ -132,6 +136,13 @@ public class TransactionService {
 
 		// Save first so the transaction has a database ID
 		transactionRepo.save(transaction);
+		
+		//notify
+		notificationService.send(
+			    sender,
+			    "₹" + amount + " transfer to " + receiver.getName()
+			        + " initiated. Expected settlement: " + transaction.getSettlementDueAt()
+			);
 
 		// 10. Create sender's debit ledger entry
 		ledgerService.recordEntry(senderWallet, transaction, LedgerEntryType.DEBIT, LedgerEntryReason.TRANSFER, amount,

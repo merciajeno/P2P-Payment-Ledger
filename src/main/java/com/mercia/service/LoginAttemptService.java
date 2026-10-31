@@ -21,6 +21,7 @@ import lombok.extern.slf4j.Slf4j;
 public class LoginAttemptService {
 
     private final LoginAttemptRepository loginAttemptRepo;
+    private final NotificationService notificationService;
 
     private static final int MAX_ATTEMPTS = 5;
     private static final int LOCK_DURATION_MINUTES = 30;
@@ -52,6 +53,10 @@ public class LoginAttemptService {
 
             attempt.setLocked(true);
             attempt.setLockedUntil(lockedUntil);
+            
+            //notification
+            notificationService.send(attempt.getUser(),
+            	    "Your account has been automatically unlocked");
         }
 
         loginAttemptRepo.save(attempt);
@@ -98,6 +103,8 @@ public class LoginAttemptService {
 
             loginAttemptRepo.save(attempt);
 
+            notificationService.send(attempt.getUser(),
+            	    "Your account has been automatically unlocked");
             log.info("Account unlocked: {}",
                 attempt.getUser().getEmail());
         }
