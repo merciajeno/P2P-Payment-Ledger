@@ -1,4 +1,5 @@
 import BrandMark from "./BrandMark";
+import NotificationBell from "./NotificationBell";
 
 export default function MainNavigation({ path, isAuthenticated, navigate, clearNotice }) {
   const isWalletPage = path === "/wallet";
@@ -93,6 +94,13 @@ export default function MainNavigation({ path, isAuthenticated, navigate, clearN
           Manage money
         </a>
       </nav>
+       <div className="topbar-right">
+        {isAuthenticated && <NotificationBell />}
+        <div className="topbar-note">
+          <span className="secure-icon" aria-hidden="true">✳</span>
+          <span>Notification</span>
+        </div>
+        </div>
       <div className="topbar-note">
         <span className="secure-icon" aria-hidden="true">✳</span>
         <span>YOUR MONEY, IN MOTION</span>

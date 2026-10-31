@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Optional;
 
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.mercia.exception.UserNotFoundException;
@@ -36,10 +37,12 @@ public class TransactionService {
 	private final FraudDetectionService fraudDetectionService;
     private final DailyWalletSummaryService dailyWalletSummaryService;
     private final NotificationService notificationService;
+    private final PasswordEncoder passwordEncoder;
+
     
 	@Transactional
 	public Transaction makeTransactionToOther(String senderEmail, String receiverEmail, BigDecimal amount,
-			String requestId) {
+			String requestId,String pin,String remark) {
 
 		// 1. Validate request ID
 		if (requestId == null || requestId.isBlank()) {
@@ -81,17 +84,17 @@ public class TransactionService {
 			throw new IllegalArgumentException("Cannot transfer money to yourself");
 		}
       
+		// pin
+		// 4a. Validate transaction PIN
+		if (!passwordEncoder.matches(pin, sender.getPIN())) {
+		    throw new IllegalArgumentException("Invalid transaction PIN");
+		}
+
 		// 5. Validate amount
 		if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
 			throw new IllegalArgumentException("Amount must be greater than zero");
 		}
-		
-		//more than 8k
-		if(amount.compareTo(MinAmount) == 1) {
-			//idk
-			
-		}
-
+	
 		// 6. Get wallets
 		Wallet senderWallet = sender.getWallet();
 		Wallet receiverWallet = receiver.getWallet();
@@ -133,10 +136,13 @@ public class TransactionService {
 		transaction.setStatus(TransactionStatus.PENDING);
 		transaction.setCreatedAt(now);
 		transaction.setSettlementDueAt(now.plusSeconds(60));
+		transaction.setRemark(remark);
 
 		// Save first so the transaction has a database ID
 		transactionRepo.save(transaction);
 		
+		// checking if greater than 8k
+		fraudDetectionService.checkHighValue(senderWallet, transaction);
 		//notify
 		notificationService.send(
 			    sender,

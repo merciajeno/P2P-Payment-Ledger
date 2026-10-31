@@ -13,17 +13,23 @@ import com.mercia.model.Role;
 import com.mercia.model.User;
 
 @Repository
-public interface UserRepository extends JpaRepository<User, Long>{
+public interface UserRepository extends JpaRepository<User, Long> {
 
 	Optional<User> findByName(String name);
-	
+
 	Optional<User> findByEmail(String email);
-	
+
 	@Query("SELECT COUNT(u) FROM User u WHERE u.createdAt >= :start AND u.createdAt < :end")
 	long countUsersRegisteredBetween(@Param("start") Instant start, @Param("end") Instant end);
-	
+
 	// In UserRepository
 	List<User> findByRole(Role role);
 
+	@Query("""
+			SELECT u FROM User u
+			WHERE LOWER(u.email) = LOWER(:query)
+			OR u.phoneNumber = :query
+			""")
+	Optional<User> findByEmailOrPhone(@Param("query") String query);
 
 }

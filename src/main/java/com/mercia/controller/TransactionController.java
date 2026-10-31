@@ -42,7 +42,9 @@ public class TransactionController {
                 senderEmail,
                 request.receiverEmail(),
                 request.amount(),
-                request.requestId()
+                request.requestId(),
+                request.pin(),
+                request.remark()
         );
 
         return ResponseEntity.ok(

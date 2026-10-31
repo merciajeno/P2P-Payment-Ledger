@@ -6,6 +6,7 @@ import java.time.Instant;
 import org.springframework.stereotype.Service;
 
 import com.mercia.model.FraudAlertType;
+import com.mercia.model.Transaction;
 import com.mercia.model.Wallet;
 import com.mercia.repository.TransactionRepository;
 
@@ -20,6 +21,8 @@ public class FraudDetectionService {
     private final TransactionRepository transactionRepo;
     private final FraudAlertSaveService fraudAlertSaveService;
     private final NotificationService notificationService;
+   
+    private static final BigDecimal HIGH_VALUE_THRESHOLD = new BigDecimal("8000");
 
     public void checkDuplicateTransfer(
             Long senderWalletId,
@@ -51,18 +54,23 @@ public class FraudDetectionService {
         }
     }
 
-//    public void checkHighValue(Wallet senderWallet, Transaction transaction) {
-//
-//        BigDecimal HIGH_VALUE_THRESHOLD = new BigDecimal("8000");
-//
-//        if (transaction.getAmount().compareTo(HIGH_VALUE_THRESHOLD) > 0) {
-//            saveAlert(senderWallet, transaction, FraudAlertType.HIGH_VALUE_TRANSACTION,
-//                    transaction.getAmount(), "High-value transaction flagged for admin review");
-//
-//            log.info("High-value alert created for transaction {}", transaction.getId());
-//        }
-//    }
+ // Called AFTER transaction is saved — so transaction has an ID to link to
+    // Does NOT block — transaction proceeds to PENDING, just raises an alert
+    public void checkHighValue(Wallet senderWallet, Transaction transaction) {
 
+        if (transaction.getAmount().compareTo(HIGH_VALUE_THRESHOLD) > 0) {
+            fraudAlertSaveService.save(
+                senderWallet,
+                transaction,
+                FraudAlertType.HIGH_VALUE_TRANSACTION,
+                transaction.getAmount(),
+                "High-value transaction flagged for admin review: ₹"
+                    + transaction.getAmount()
+            );
+            log.info("High-value alert created for transaction {}", transaction.getId());
+            // No throw — transaction continues to PENDING normally
+        }
+    }
    
 }
 

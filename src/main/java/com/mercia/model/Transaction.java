@@ -48,6 +48,9 @@ public class Transaction {
 
 	@Column(name = "settled_at")
 	private Instant settledAt;
+    
+	@Column(length = 200)
+	private String remark;
 
 	@PrePersist
 	protected void onCreate() {

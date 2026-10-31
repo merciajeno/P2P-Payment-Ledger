@@ -19,13 +19,15 @@ public class SecurityConfig {
 		http.csrf(csrf->csrf.disable())
 		.addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
 		.authorizeHttpRequests(auth->
-		auth.requestMatchers("/login").permitAll()
-		.requestMatchers("/register").permitAll()
-		.requestMatchers("/wallet/**").hasRole("USER")
-		.requestMatchers("/api/ledger/**").hasRole("USER")
-		.requestMatchers("/transactions", "/transactions/**").hasRole("USER")
-		.requestMatchers("/hi").authenticated()
-		.anyRequest().authenticated());
+		auth.requestMatchers("/login", "/register").permitAll()
+	    .requestMatchers("/wallet/**").hasRole("USER")
+	    .requestMatchers("/api/ledger/**").hasRole("USER")
+	    .requestMatchers("/transactions", "/transactions/**").hasRole("USER")
+	    .requestMatchers("/users/search").hasRole("USER")
+	    .requestMatchers("/notifications/**").hasRole("USER")
+	    .requestMatchers("/admin/**").hasRole("ADMIN")
+	    .anyRequest().authenticated());
+
 		return http.build();
 	}
 	

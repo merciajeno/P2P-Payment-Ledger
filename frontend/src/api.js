@@ -104,3 +104,32 @@ export async function fetchLedgerHistory(page = 0) {
     throw new Error(getErrorMessage(error, "Could not load transaction history."));
   }
 }
+
+export async function fetchUnreadCount() {
+  try {
+    const response = await api.get("/notifications/unread-count");
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error) && [401, 403].includes(error.response?.status)) {
+      return null;
+    }
+    return 0;
+  }
+}
+
+export async function fetchNotifications() {
+  try {
+    const response = await api.get("/notifications");
+    return response.data;
+  } catch (error) {
+    throw new Error(getErrorMessage(error, "Could not load notifications."));
+  }
+}
+
+export async function markNotificationsRead() {
+  try {
+    await api.post("/notifications/mark-read");
+  } catch (error) {
+    // non-critical, fail silently
+  }
+}
