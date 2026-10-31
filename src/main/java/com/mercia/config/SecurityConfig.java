@@ -22,7 +22,7 @@ public class SecurityConfig {
 		auth.requestMatchers("/login").permitAll()
 		.requestMatchers("/register").permitAll()
 		.requestMatchers("/wallet/**").hasRole("USER")
-		.requestMatchers("/transactions/**").hasRole("USER")
+		.requestMatchers("/api/ledger/**").hasRole("USER")
 		.requestMatchers("/transactions", "/transactions/**").hasRole("USER")
 		.requestMatchers("/hi").authenticated()
 		.anyRequest().authenticated());

@@ -4,6 +4,7 @@ export default function MainNavigation({ path, isAuthenticated, navigate, clearN
   const isWalletPage = path === "/wallet";
   const isWalletActionsPage = path === "/manage-money";
   const isSendMoneyPage = path === "/send-money";
+  const isHistoryPage = path === "/history";
 
   return (
     <header className="topbar">
@@ -44,17 +45,30 @@ export default function MainNavigation({ path, isAuthenticated, navigate, clearN
           </>
         )}
         {isAuthenticated && (
-          <a
-            className={isSendMoneyPage ? "nav-link nav-link-active" : "nav-link"}
-            href="/send-money"
-            aria-current={isSendMoneyPage ? "page" : undefined}
-            onClick={(event) => {
-              event.preventDefault();
-              navigate("/send-money");
-            }}
-          >
-            Send money
-          </a>
+          <>
+            <a
+              className={isSendMoneyPage ? "nav-link nav-link-active" : "nav-link"}
+              href="/send-money"
+              aria-current={isSendMoneyPage ? "page" : undefined}
+              onClick={(event) => {
+                event.preventDefault();
+                navigate("/send-money");
+              }}
+            >
+              Send money
+            </a>
+            <a
+              className={isHistoryPage ? "nav-link nav-link-active" : "nav-link"}
+              href="/history"
+              aria-current={isHistoryPage ? "page" : undefined}
+              onClick={(event) => {
+                event.preventDefault();
+                navigate("/history");
+              }}
+            >
+              History
+            </a>
+          </>
         )}
         <a
           className={isWalletPage ? "nav-link nav-link-active" : "nav-link"}

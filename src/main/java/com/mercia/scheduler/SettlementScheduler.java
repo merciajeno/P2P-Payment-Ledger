@@ -15,7 +15,7 @@ public class SettlementScheduler {
 
     private final SettlementService settlementService;
 
-    @Scheduled(fixedRate = 60000)
+    @Scheduled(fixedRate = 180000)//after every 3 minutes
     public void runSettlement() {
 
         log.info("Settlement job started");

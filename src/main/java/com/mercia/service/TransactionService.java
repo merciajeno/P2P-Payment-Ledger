@@ -100,8 +100,7 @@ public class TransactionService {
 
 		fraudDetectionService.checkDuplicateTransfer(
 			    senderWallet.getId(),
-			    receiverWallet.getId(),
-			    amount
+			    receiverWallet.getId()
 			);
 		// 7. Check available balance
 		if (senderWallet.getBalance().compareTo(amount) < 0) {

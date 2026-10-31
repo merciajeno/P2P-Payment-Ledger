@@ -36,6 +36,7 @@ public class AuthService {
 	private final PasswordEncoder passwordEncoder;
 	private final WalletRepository walletRepo;
 	private final JwtService jwtService;
+	private final LoginAttemptService loginAttemptService;
 
 	@Transactional
 	public ResponseEntity<String> register(RegisterRequest request) {
@@ -82,14 +83,21 @@ public class AuthService {
 		String password = login.password();
 		User existingUser = userRepo.findByEmail(email)
 				.orElseThrow(() -> new UserNotFoundException("Email is not registered"));
+		
+		if(loginAttemptService.isAccountLocked(existingUser))
+		{
+			 throw new IllegalStateException("Account is locked");
+		}
 
 		boolean passwordMatch = passwordEncoder.matches(password, existingUser.getPassword());
 		if (!passwordMatch) {
+			log.warn("Incorrect password");
+			loginAttemptService.recordFailedAttempt(existingUser);
 			throw new InvalidPasswordException("Invalid password");
 		}
+		loginAttemptService.recordSuccessfulLogin(existingUser);
 		String username = existingUser.getName();
 		String token = jwtService.generateToken(username);
-		log.info(token);
 		ResponseCookie cookie = ResponseCookie.from("token", token).httpOnly(true).secure(false)
 				.path("/").sameSite("Strict").maxAge(Duration.ofMinutes(30)).build();
 		return ResponseEntity.accepted().header(HttpHeaders.SET_COOKIE, cookie.toString()).body("Login successful");

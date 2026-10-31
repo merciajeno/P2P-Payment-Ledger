@@ -2,257 +2,293 @@ import { useEffect, useRef, useState } from "react";
 import { submitTransfer } from "../api";
 import Field from "./Field";
 
-const PENDING_TRANSFER_KEY = "p2pLedgerPendingTransfer";
-const TRANSACTION_STATUSES = new Set(["PENDING", "SUCCESS", "FAILED", "DECLINED"]);
+const STORAGE_KEY = "p2pLedgerPendingTransfer";
 
-export default function SendMoney({ onBack, onBalanceChange, onSessionExpired }) {
+const VALID_STATUSES = [
+  "PENDING",
+  "SUCCESS",
+  "FAILED",
+  "DECLINED",
+];
+
+export default function SendMoney({
+  onBack,
+  onBalanceChange,
+  onSessionExpired,
+}) {
   const [receiverEmail, setReceiverEmail] = useState("");
   const [amount, setAmount] = useState("");
-  const [notice, setNotice] = useState(null);
-  const [pendingPayment, setPendingPayment] = useState(null);
-  const [transactionStatus, setTransactionStatus] = useState(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isRecovering, setIsRecovering] = useState(true);
-  const [isReviewing, setIsReviewing] = useState(false);
-  const submissionLock = useRef(false);
+  const [payment, setPayment] = useState(null);
+  const [status, setStatus] = useState(null);
+  const [notice, setNotice] = useState("");
+  const [reviewing, setReviewing] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
 
+  const lock = useRef(false);
+
+  // 1. Recover an unfinished payment when the component loads
   useEffect(() => {
     try {
-      const savedRequest = window.sessionStorage.getItem(PENDING_TRANSFER_KEY);
-      if (savedRequest) {
-        const restored = JSON.parse(savedRequest);
-        const requestBody = JSON.parse(restored.body);
+      const saved = sessionStorage.getItem(STORAGE_KEY);
+
+      if (saved) {
+        const restored = JSON.parse(saved);
+        const body = JSON.parse(restored.body);
+
         if (
           typeof restored.requestId !== "string" ||
-          requestBody.requestId !== restored.requestId ||
-          typeof requestBody.receiverEmail !== "string" ||
-          typeof requestBody.amount !== "number"
+          body.requestId !== restored.requestId ||
+          typeof body.receiverEmail !== "string" ||
+          typeof body.amount !== "number"
         ) {
-          throw new Error("The saved payment request is invalid. It has not been changed.");
+          throw new Error("Saved payment data is invalid.");
         }
-        setPendingPayment(restored);
-        setReceiverEmail(requestBody.receiverEmail);
-        setAmount(String(requestBody.amount));
-        setNotice({
-          type: "error",
-          text: "A payment has an unknown result. Retry it to check its status; the same request will be reused.",
-        });
+
+        setPayment(restored);
+        setReceiverEmail(body.receiverEmail);
+        setAmount(String(body.amount));
+
+        setNotice(
+          "An earlier payment has an unknown result. Retry it to recover its status."
+        );
       }
     } catch (error) {
-      setNotice({
-        type: "error",
-        text:
-          error instanceof DOMException
-            ? "Could not read the saved payment from this browser session."
-            : error.message,
-      });
+      setNotice(error.message);
     } finally {
-      setIsRecovering(false);
+      setLoading(false);
     }
   }, []);
 
-  async function sendPayment(payment) {
-    if (submissionLock.current) {
-      return;
-    }
+  // 2. Send or retry a payment
+  async function sendPayment(currentPayment) {
+    if (lock.current) return;
 
-    submissionLock.current = true;
-    setIsSubmitting(true);
-    setNotice(null);
+    lock.current = true;
+    setSubmitting(true);
+    setNotice("");
 
     try {
-      const result = await submitTransfer(payment.body);
+      const result = await submitTransfer(currentPayment.body);
+
+      // The server has definitively rejected the request
       if (result.definitiveError) {
-        window.sessionStorage.removeItem(PENDING_TRANSFER_KEY);
-        setPendingPayment(null);
-        setIsReviewing(false);
+        sessionStorage.removeItem(STORAGE_KEY);
+        setPayment(null);
+
         if (result.status === 401 || result.status === 403) {
           onSessionExpired();
           return;
         }
-        setNotice({ type: "error", text: result.message });
+
+        setNotice(result.message);
         return;
       }
 
+      // We don't know whether the server processed the payment
       if (result.uncertainError) {
-        setNotice({
-          type: "error",
-          text: `${result.message} Retry to safely check this same payment.`,
-        });
+        setNotice(
+          `${result.message} Please retry the same payment.`
+        );
         return;
       }
 
+      // Verify the response
       if (
-        result.requestId !== payment.requestId ||
-        !TRANSACTION_STATUSES.has(result.status)
+        result.requestId !== currentPayment.requestId ||
+        !VALID_STATUSES.includes(result.transactionStatus)
       ) {
-        setNotice({
-          type: "error",
-          text: "The server response could not be verified. Retry to check this same payment.",
-        });
+        setNotice(
+          "Could not verify the payment response. Retry the same payment."
+        );
         return;
       }
 
-      window.sessionStorage.removeItem(PENDING_TRANSFER_KEY);
-      setPendingPayment(null);
-      setTransactionStatus(result.status);
-      setIsReviewing(false);
+      // Payment result successfully recovered
+      sessionStorage.removeItem(STORAGE_KEY);
+
+      setPayment(null);
+      setStatus(result.status);
       setReceiverEmail("");
       setAmount("");
+      setReviewing(false);
+
       if (Number.isFinite(result.balance)) {
         onBalanceChange(result.balance);
       }
-      setNotice(null);
     } catch (error) {
-      setNotice({
-        type: "error",
-        text: `${error.message} Retry to safely check this same payment.`,
-      });
+      // Network error: preserve the request for safe retry
+      setNotice(
+        `${error.message} Retry the same payment.`
+      );
     } finally {
-      submissionLock.current = false;
-      setIsSubmitting(false);
+      lock.current = false;
+      setSubmitting(false);
     }
   }
 
-  function handleReview(event) {
-    event.preventDefault();
-    setNotice(null);
-    setIsReviewing(true);
-  }
-
-  function handleConfirm() {
-    if (pendingPayment) {
-      void sendPayment(pendingPayment);
+  // 3. Create a new payment with a unique request ID
+  function confirmPayment() {
+    if (payment) {
+      sendPayment(payment);
       return;
     }
 
     const requestId = crypto.randomUUID();
+
     const body = JSON.stringify({
       requestId,
       receiverEmail: receiverEmail.trim(),
       amount: Number(amount),
     });
-    const payment = { requestId, body };
+
+    const newPayment = { requestId, body };
 
     try {
-      window.sessionStorage.setItem(PENDING_TRANSFER_KEY, JSON.stringify(payment));
+      // Save BEFORE sending the request
+      sessionStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify(newPayment)
+      );
     } catch {
-      setNotice({
-        type: "error",
-        text: "Could not save this payment for safe retry. No payment was sent.",
-      });
+      setNotice(
+        "Could not save payment details. No payment was sent."
+      );
       return;
     }
 
-    setPendingPayment(payment);
-    setTransactionStatus(null);
-    void sendPayment(payment);
+    setPayment(newPayment);
+    setStatus(null);
+
+    sendPayment(newPayment);
   }
 
+  // 4. Start a completely new payment
   function startNewPayment() {
-    setTransactionStatus(null);
-    setNotice(null);
+    setPayment(null);
+    setStatus(null);
+    setNotice("");
     setReceiverEmail("");
     setAmount("");
-    setIsReviewing(false);
+    setReviewing(false);
+  }
+
+  if (loading) {
+    return <p role="status">Checking pending payments...</p>;
   }
 
   return (
-    <section className="wallet-action-panel form-panel" aria-labelledby="send-money-title">
-      <button className="back-button" type="button" onClick={onBack}>
+    <section className="wallet-action-panel form-panel">
+      <button type="button" className="back-button" onClick={onBack}>
         ← Back to wallet
       </button>
+
       <div className="form-kicker">TRANSFER</div>
-      <h1 id="send-money-title">Send money</h1>
-      <p className="send-money-description">
-        Enter the recipient’s registered email address and the amount to send.
-      </p>
-      {isRecovering ? (
-        <p className="wallet-loading" role="status">Checking for a pending payment…</p>
-      ) : pendingPayment ? (
+      <h1>Send money</h1>
+
+      {payment ? (
         <div className="auth-form">
           <p>
-            Retry the saved payment to recover its result. The request ID and payment details
-            will remain unchanged.
+            An earlier payment needs to be checked.
+            Its request ID and payment details are preserved.
           </p>
+
           <button
-            className="submit-button"
             type="button"
-            disabled={isSubmitting}
-            onClick={() => void sendPayment(pendingPayment)}
+            className="submit-button"
+            disabled={submitting}
+            onClick={() => sendPayment(payment)}
           >
-            {isSubmitting ? "Checking payment…" : "Retry payment"}
+            {submitting ? "Checking..." : "Retry payment"}
           </button>
         </div>
-      ) : isReviewing ? (
+      ) : reviewing ? (
         <div className="auth-form">
-          <p>Send <strong>{Number(amount).toFixed(2)}</strong> to <strong>{receiverEmail.trim()}</strong>?</p>
+          <p>
+            Send <strong>{Number(amount).toFixed(2)}</strong> to{" "}
+            <strong>{receiverEmail.trim()}</strong>?
+          </p>
+
           <button
+            type="button"
             className="submit-button"
-            type="button"
-            disabled={isSubmitting}
-            onClick={handleConfirm}
+            disabled={submitting}
+            onClick={confirmPayment}
           >
-            {isSubmitting ? "One moment…" : "Confirm payment"}
+            {submitting ? "Processing..." : "Confirm payment"}
           </button>
+
           <button
-            className="back-button"
             type="button"
-            disabled={isSubmitting}
-            onClick={() => setIsReviewing(false)}
+            className="back-button"
+            disabled={submitting}
+            onClick={() => setReviewing(false)}
           >
             Edit payment
           </button>
         </div>
       ) : (
-        <form className="auth-form" onSubmit={handleReview}>
+        <form
+          className="auth-form"
+          onSubmit={(event) => {
+            event.preventDefault();
+            setNotice("");
+            setReviewing(true);
+          }}
+        >
           <Field
-            autoComplete="email"
             label="Recipient email"
-            maxLength={254}
-            onChange={(event) => setReceiverEmail(event.target.value)}
-            placeholder="recipient@example.com"
-            required
             type="email"
             value={receiverEmail}
+            onChange={(event) =>
+              setReceiverEmail(event.target.value)
+            }
+            placeholder="recipient@example.com"
+            required
           />
+
           <Field
-            autoComplete="off"
             label="Amount"
+            type="number"
             min="0.01"
+            step="0.01"
+            value={amount}
             onChange={(event) => setAmount(event.target.value)}
             placeholder="0.00"
             required
-            step="0.01"
-            type="number"
-            value={amount}
           />
-          <button className="submit-button" type="submit">
+
+          <button type="submit" className="submit-button">
             Review payment
           </button>
         </form>
       )}
-      {transactionStatus && (
+
+      {status && (
         <div
           className={`notice ${
-            transactionStatus === "FAILED" || transactionStatus === "DECLINED"
+            status === "FAILED" || status === "DECLINED"
               ? "notice-error"
               : "notice-success"
           }`}
           role="status"
-          aria-live="polite"
         >
-          Transaction status: {transactionStatus}
+          Transaction status: {status}
         </div>
       )}
+
       {notice && (
-        <div className={`notice notice-${notice.type}`} role="status" aria-live="polite">
-          <span aria-hidden="true">{notice.type === "success" ? "✓" : "!"}</span>
-          {notice.text}
+        <div className="notice notice-error" role="alert">
+          {notice}
         </div>
       )}
-      {!pendingPayment && !isReviewing && transactionStatus && (
-        <button className="back-button" type="button" onClick={startNewPayment}>
+
+      {!payment && status && (
+        <button
+          type="button"
+          className="back-button"
+          onClick={startNewPayment}
+        >
           Start a new payment
         </button>
       )}

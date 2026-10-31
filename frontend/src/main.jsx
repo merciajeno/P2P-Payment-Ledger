@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import AuthPage from "./components/AuthPage";
 import MainNavigation from "./components/MainNavigation";
 import SendMoney from "./components/SendMoney";
+import TransactionHistoryPage from "./components/TransactionHistoryPage";
 import WalletActions from "./components/WalletActions";
 import WalletPage from "./components/WalletPage";
 import { fetchWalletBalance } from "./api";
@@ -21,6 +22,7 @@ function App() {
   const [isCheckingSession, setIsCheckingSession] = useState(true);
   const [notice, setNotice] = useState(null);
   const isAuthPage = ["/", "/login", "/signup"].includes(path);
+  const isProtectedPage = ["/wallet", "/manage-money", "/send-money", "/history"].includes(path);
 
   function navigate(nextPath) {
     if (window.location.pathname !== nextPath) {
@@ -64,7 +66,7 @@ function App() {
           setNotice(null);
           if (isAuthPage) {
             navigate("/wallet");
-          } else if (!["/wallet", "/manage-money", "/send-money"].includes(path)) {
+          } else if (!isProtectedPage) {
             navigate("/wallet");
           }
           return;
@@ -72,7 +74,7 @@ function App() {
 
         setIsAuthenticated(false);
         setWalletBalance(null);
-        if (!isAuthPage) {
+        if (isProtectedPage || !isAuthPage) {
           navigate("/login");
         } else if (path === "/") {
           navigate("/login");
@@ -85,7 +87,7 @@ function App() {
 
         setIsAuthenticated(false);
         setNotice({ type: "error", text: getErrorMessage(error) });
-        if (!isAuthPage) {
+        if (isProtectedPage || !isAuthPage) {
           navigate("/login");
         }
       })
@@ -137,6 +139,8 @@ function App() {
           onBalanceChange={setWalletBalance}
           onSessionExpired={handleSessionExpired}
         />
+      ) : isAuthenticated && path === "/history" ? (
+        <TransactionHistoryPage />
       ) : isAuthenticated && path === "/wallet" ? (
         <WalletPage
           balance={walletBalance}

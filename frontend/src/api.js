@@ -95,3 +95,12 @@ export async function submitTransfer(requestBody) {
     };
   }
 }
+
+export async function fetchLedgerHistory(page = 0) {
+  try {
+    const response = await api.get("/api/ledger/history", { params: { page } });
+    return response.data;
+  } catch (error) {
+    throw new Error(getErrorMessage(error, "Could not load transaction history."));
+  }
+}
