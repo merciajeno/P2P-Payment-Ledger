@@ -37,7 +37,7 @@ export default function AuthPage({ mode, notice, setNotice, onLoginSuccess, onRe
         navigate("/login");
         onRegisterSuccess(result.responseBody);
       } else {
-        onLoginSuccess(result.balance);
+        onLoginSuccess(result);
       }
     } catch (error) {
       setFormNotice({ type: "error", text: getErrorMessage(error) });

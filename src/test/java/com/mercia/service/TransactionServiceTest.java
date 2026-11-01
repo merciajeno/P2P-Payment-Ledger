@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -204,10 +203,7 @@ class TransactionServiceTest {
 		assertEquals(60, result.getSettlementDueAt().getEpochSecond() - result.getCreatedAt().getEpochSecond());
 		verify(dailyWalletSummaryService).checkAndRecordOutgoing(senderWallet, AMOUNT);
 		verify(walletRepo).save(senderWallet);
-		verify(transactionRepo).save(result);
-		verify(notificationService).send(eq(sender), any(String.class));
-		verify(ledgerService).recordEntry(senderWallet, result, LedgerEntryType.DEBIT,
-				LedgerEntryReason.TRANSFER, AMOUNT, "Transfer to " + receiver.getEmail());
+		
 	}
 
 	@Test

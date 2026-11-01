@@ -28,7 +28,6 @@ public class TransactionController {
 
     private final TransactionService transactionService;
     private final UserRepository userRepo;
-
    
     @PostMapping()
     public ResponseEntity<TransactionResponse> makeTransactionToOther(
@@ -76,4 +75,8 @@ public class TransactionController {
                 .orElseThrow(() -> new UserNotFoundException("Authenticated user not found"));
         return user.getEmail();
     }
+    
+    
+ 
+
 }

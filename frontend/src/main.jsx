@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
+import AdminPage from "./components/AdminPage";
 import AuthPage from "./components/AuthPage";
 import MainNavigation from "./components/MainNavigation";
 import SendMoney from "./components/SendMoney";
 import TransactionHistoryPage from "./components/TransactionHistoryPage";
 import WalletActions from "./components/WalletActions";
 import WalletPage from "./components/WalletPage";
-import { fetchWalletBalance } from "./api";
+import { fetchCurrentUser, fetchWalletBalance, logoutUser } from "./api";
 import "./styles.css";
 
 function getErrorMessage(error) {
@@ -17,12 +18,12 @@ function getErrorMessage(error) {
 
 function App() {
   const [path, setPath] = useState(window.location.pathname);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
   const [walletBalance, setWalletBalance] = useState(null);
   const [isCheckingSession, setIsCheckingSession] = useState(true);
   const [notice, setNotice] = useState(null);
   const isAuthPage = ["/", "/login", "/signup"].includes(path);
-  const isProtectedPage = ["/wallet", "/manage-money", "/send-money", "/history"].includes(path);
+  const isProtectedPage = ["/admin", "/wallet", "/manage-money", "/send-money", "/history"].includes(path);
 
   function navigate(nextPath) {
     if (window.location.pathname !== nextPath) {
@@ -32,13 +33,21 @@ function App() {
   }
 
   function handleSessionExpired() {
-    setIsAuthenticated(false);
+    setCurrentUser(null);
     setWalletBalance(null);
     navigate("/login");
     setNotice({
       type: "error",
       text: "Your session has expired. Please sign in again.",
     });
+  }
+
+  async function handleLogout() {
+    await logoutUser();
+    setCurrentUser(null);
+    setWalletBalance(null);
+    setNotice(null);
+    navigate("/login");
   }
 
   useEffect(() => {
@@ -54,59 +63,72 @@ function App() {
     let isCurrent = true;
     setIsCheckingSession(true);
 
-    fetchWalletBalance()
-      .then((balance) => {
+    async function checkSession() {
+      try {
+        const user = await fetchCurrentUser();
         if (!isCurrent) {
           return;
         }
 
-        if (balance !== null) {
-          setWalletBalance(balance);
-          setIsAuthenticated(true);
-          setNotice(null);
-          if (isAuthPage) {
-            navigate("/wallet");
-          } else if (!isProtectedPage) {
-            navigate("/wallet");
+        if (user === null) {
+          setCurrentUser(null);
+          setWalletBalance(null);
+          if (isProtectedPage || !isAuthPage || path === "/") {
+            navigate("/login");
           }
           return;
         }
 
-        setIsAuthenticated(false);
-        setWalletBalance(null);
-        if (isProtectedPage || !isAuthPage) {
-          navigate("/login");
-        } else if (path === "/") {
-          navigate("/login");
+        const balance = user.role === "USER" ? await fetchWalletBalance() : null;
+        if (isCurrent) {
+          if (user.role === "USER" && balance === null) {
+            setCurrentUser(null);
+            setWalletBalance(null);
+            navigate("/login");
+            return;
+          }
+
+          setCurrentUser(user);
+          setWalletBalance(balance);
+          setNotice(null);
+          if (user.role === "ADMIN") {
+            if (isAuthPage || path !== "/admin") {
+              navigate("/admin");
+            }
+          } else if (isAuthPage || !isProtectedPage || path === "/admin") {
+            navigate("/wallet");
+          }
         }
-      })
-      .catch((error) => {
+      } catch (error) {
         if (!isCurrent) {
           return;
         }
 
-        setIsAuthenticated(false);
+        setCurrentUser(null);
+        setWalletBalance(null);
         setNotice({ type: "error", text: getErrorMessage(error) });
         if (isProtectedPage || !isAuthPage) {
           navigate("/login");
         }
-      })
-      .finally(() => {
+      } finally {
         if (isCurrent) {
           setIsCheckingSession(false);
         }
-      });
+      }
+    }
+
+    checkSession();
 
     return () => {
       isCurrent = false;
     };
   }, [path]);
 
-  function handleLoginSuccess(balance) {
+  function handleLoginSuccess({ user, balance }) {
+    setCurrentUser(user);
     setWalletBalance(balance);
-    setIsAuthenticated(true);
     setNotice(null);
-    navigate("/wallet");
+    navigate(user.role === "ADMIN" ? "/admin" : "/wallet");
   }
 
   function handleRegisterSuccess(message) {
@@ -120,28 +142,32 @@ function App() {
     <main className="page-shell">
       <MainNavigation
         path={path}
-        isAuthenticated={isAuthenticated}
+        isAuthenticated={currentUser !== null}
+        userRole={currentUser?.role}
         navigate={navigate}
         clearNotice={() => setNotice(null)}
+        onLogout={handleLogout}
       />
 
       {isCheckingSession ? (
         <section className="wallet-loading" role="status">Checking your session…</section>
-      ) : isAuthenticated && path === "/manage-money" ? (
+      ) : currentUser?.role === "ADMIN" && path === "/admin" ? (
+        <AdminPage />
+      ) : currentUser?.role === "USER" && path === "/manage-money" ? (
         <WalletActions
           onBack={() => navigate("/wallet")}
           onBalanceChange={setWalletBalance}
           onSessionExpired={handleSessionExpired}
         />
-      ) : isAuthenticated && path === "/send-money" ? (
+      ) : currentUser?.role === "USER" && path === "/send-money" ? (
         <SendMoney
           onBack={() => navigate("/wallet")}
           onBalanceChange={setWalletBalance}
           onSessionExpired={handleSessionExpired}
         />
-      ) : isAuthenticated && path === "/history" ? (
+      ) : currentUser?.role === "USER" && path === "/history" ? (
         <TransactionHistoryPage />
-      ) : isAuthenticated && path === "/wallet" ? (
+      ) : currentUser?.role === "USER" && path === "/wallet" ? (
         <WalletPage
           balance={walletBalance}
           onManageMoney={() => navigate("/manage-money")}

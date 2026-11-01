@@ -17,9 +17,10 @@ public class SecurityConfig {
 	SecurityFilterChain securityFilterChain(HttpSecurity http,JwtFilter jwtFilter)
 	{
 		http.csrf(csrf->csrf.disable())
+		.logout(logout -> logout.disable())
 		.addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
 		.authorizeHttpRequests(auth->
-		auth.requestMatchers("/login", "/register").permitAll()
+		auth.requestMatchers("/login", "/register", "/logout").permitAll()
 	    .requestMatchers("/wallet/**").hasRole("USER")
 	    .requestMatchers("/api/ledger/**").hasRole("USER")
 	    .requestMatchers("/transactions", "/transactions/**").hasRole("USER")

@@ -6,6 +6,7 @@ export default function NotificationBell() {
   const [notifications, setNotifications] = useState([]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const panelRef = useRef(null);
 
   // Poll unread count every 30 seconds
@@ -19,35 +20,52 @@ export default function NotificationBell() {
 
     loadCount();
     const interval = setInterval(loadCount, 30000);
-    return () => { cancelled = true; clearInterval(interval); };
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
   }, []);
 
-  // Close on outside click
+  // Close on outside CLICK — not mousedown
+  // mousedown fires before onClick so using it causes the panel
+  // to close before it ever opens
   useEffect(() => {
+    if (!open) return;
+
     function handleClickOutside(e) {
       if (panelRef.current && !panelRef.current.contains(e.target)) {
         setOpen(false);
       }
     }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+
+    // Use click, not mousedown
+    document.addEventListener("click", handleClickOutside);
+    return () => document.removeEventListener("click", handleClickOutside);
+  }, [open]); // only attach listener when panel is open
 
   async function handleOpen() {
-    if (open) { setOpen(false); return; }
+    if (open) {
+      setOpen(false);
+      return;
+    }
 
     setOpen(true);
     setLoading(true);
+    setError(null);
+
     try {
       const data = await fetchNotifications();
+      if (!Array.isArray(data)) {
+        throw new Error("The server returned an invalid notifications response.");
+      }
       setNotifications(data);
-      // Mark as read after opening
+
       if (unreadCount > 0) {
         await markNotificationsRead();
         setUnreadCount(0);
       }
-    } catch {
-      // fail silently — panel just shows empty
+    } catch (e) {
+      setError("Could not load notifications.");
     } finally {
       setLoading(false);
     }
@@ -59,6 +77,7 @@ export default function NotificationBell() {
         type="button"
         className="notif-bell-button"
         aria-label={`Notifications${unreadCount > 0 ? `, ${unreadCount} unread` : ""}`}
+        aria-expanded={open}
         onClick={handleOpen}
       >
         <span aria-hidden="true">🔔</span>
@@ -74,19 +93,27 @@ export default function NotificationBell() {
           <div className="notif-panel-header">
             <span>Notifications</span>
           </div>
+
           {loading ? (
             <p className="notif-empty">Loading...</p>
+          ) : error ? (
+            <p className="notif-empty">{error}</p>
           ) : notifications.length === 0 ? (
             <p className="notif-empty">No notifications yet.</p>
           ) : (
             <ul className="notif-list">
               {notifications.map((n) => (
-                <li key={n.id} className={`notif-item${n.read ? "" : " notif-item-unread"}`}>
+                <li
+                  key={n.id}
+                  className={`notif-item${n.read ? "" : " notif-item-unread"}`}
+                >
                   <span className="notif-message">{n.message}</span>
                   <time className="notif-time">
                     {new Date(n.createdAt).toLocaleString(undefined, {
-                      month: "short", day: "numeric",
-                      hour: "2-digit", minute: "2-digit",
+                      month: "short",
+                      day: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
                     })}
                   </time>
                 </li>

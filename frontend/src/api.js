@@ -37,6 +37,22 @@ export async function fetchWalletBalance() {
   }
 }
 
+export async function fetchCurrentUser() {
+  try {
+    const response = await api.get("/me");
+    const user = response.data;
+    if (!user || typeof user.name !== "string" || !["ADMIN", "USER"].includes(user.role)) {
+      throw new Error("The server returned an invalid user session.");
+    }
+    return user;
+  } catch (error) {
+    if (axios.isAxiosError(error) && [401, 403].includes(error.response?.status)) {
+      return null;
+    }
+    throw new Error(getErrorMessage(error, "Could not verify your session."));
+  }
+}
+
 export async function submitAuthentication(mode, request) {
   const endpoint = mode === "register" ? "/register" : "/login";
   let response;
@@ -51,12 +67,25 @@ export async function submitAuthentication(mode, request) {
     return { responseBody };
   }
 
-  const balance = await fetchWalletBalance();
-  if (balance === null) {
+  const user = await fetchCurrentUser();
+  if (user === null) {
     throw new Error("Could not verify your session. Please sign in again.");
   }
 
-  return { balance };
+  const balance = user.role === "USER" ? await fetchWalletBalance() : null;
+  if (user.role === "USER" && balance === null) {
+    throw new Error("Could not load your wallet. Please sign in again.");
+  }
+
+  return { balance, user };
+}
+
+export async function logoutUser() {
+  try {
+    await api.post("/logout");
+  } catch (error) {
+    throw new Error(getErrorMessage(error, "Could not log out. Please try again."));
+  }
 }
 
 export async function submitWalletAction(action, amount) {
@@ -105,6 +134,22 @@ export async function fetchLedgerHistory(page = 0) {
   }
 }
 
+export async function searchUser(query) {
+  try {
+    const response = await api.get("/users/search", { params: { query } });
+    const user = response.data;
+    if (!user || typeof user.name !== "string" || typeof user.email !== "string") {
+      throw new Error("The server returned an invalid user search result.");
+    }
+    return user;
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response?.status === 404) {
+      return null;
+    }
+    throw new Error(getErrorMessage(error, "Could not search for this user."));
+  }
+}
+
 export async function fetchUnreadCount() {
   try {
     const response = await api.get("/notifications/unread-count");
@@ -132,4 +177,66 @@ export async function markNotificationsRead() {
   } catch (error) {
     // non-critical, fail silently
   }
+}
+
+async function fetchAdminData(path, fallback) {
+  try {
+    const response = await api.get(path);
+    return response.data;
+  } catch (error) {
+    throw new Error(getErrorMessage(error, fallback));
+  }
+}
+
+async function postAdminAction(path, fallback) {
+  try {
+    const response = await api.post(path);
+    return response.data;
+  } catch (error) {
+    throw new Error(getErrorMessage(error, fallback));
+  }
+}
+
+export function fetchAdminDashboard() {
+  return fetchAdminData("/admin/dashboard", "Could not load the admin dashboard.");
+}
+
+export function fetchAdminUsers() {
+  return fetchAdminData("/admin/users", "Could not load users.");
+}
+
+export function fetchAdminTransactions(page = 0) {
+  return fetchAdminData(`/admin/transactions?page=${page}`, "Could not load transactions.");
+}
+
+export function fetchPendingSettlements() {
+  return fetchAdminData("/admin/settlements/pending", "Could not load pending settlements.");
+}
+
+export function fetchFraudAlerts() {
+  return fetchAdminData("/admin/fraud-alerts", "Could not load fraud alerts.");
+}
+
+export function fetchRecentJobs() {
+  return fetchAdminData("/admin/jobs", "Could not load settlement jobs.");
+}
+
+export function freezeWallet(userId) {
+  return postAdminAction(`/admin/users/${userId}/freeze`, "Could not freeze the wallet.");
+}
+
+export function unfreezeWallet(userId) {
+  return postAdminAction(`/admin/users/${userId}/unfreeze`, "Could not unfreeze the wallet.");
+}
+
+export function manualSettle(transactionId) {
+  return postAdminAction(`/admin/settlements/${transactionId}/settle`, "Could not settle the transaction.");
+}
+
+export function blockFraudAlert(alertId) {
+  return postAdminAction(`/admin/fraud-alerts/${alertId}/block`, "Could not block the transaction.");
+}
+
+export function dismissFraudAlert(alertId) {
+  return postAdminAction(`/admin/fraud-alerts/${alertId}/dismiss`, "Could not dismiss the alert.");
 }

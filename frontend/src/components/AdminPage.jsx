@@ -14,13 +14,21 @@ export default function AdminPage() {
 
   return (
     <section className="admin-page">
-      <div className="form-kicker">ADMIN PANEL</div>
-      <h1>Admin</h1>
-      <div className="admin-tabs">
+      <header className="admin-page-header">
+        <div>
+          <div className="admin-eyebrow"><span /> ADMINISTRATION</div>
+          <h1>Control center</h1>
+          <p>Monitor activity and manage the ledger from one place.</p>
+        </div>
+        <span className="admin-access-label">Administrator access</span>
+      </header>
+      <div className="admin-tabs" role="tablist" aria-label="Admin sections">
         {TABS.map((t) => (
           <button
             key={t}
             type="button"
+            role="tab"
+            aria-selected={tab === t}
             className={`admin-tab${tab === t ? " admin-tab-active" : ""}`}
             onClick={() => setTab(t)}
           >
@@ -28,7 +36,7 @@ export default function AdminPage() {
           </button>
         ))}
       </div>
-      <div className="admin-content">
+      <div className="admin-content" role="tabpanel" aria-label={`${tab} overview`}>
         {tab === "Dashboard"    && <AdminDashboard />}
         {tab === "Users"        && <AdminUsers />}
         {tab === "Transactions" && <AdminTransactions />}
@@ -49,26 +57,27 @@ function AdminDashboard() {
     fetchAdminDashboard().then(setData).catch((e) => setError(e.message));
   }, []);
 
-  if (error) return <p className="admin-error">{error}</p>;
-  if (!data)  return <p className="admin-loading">Loading...</p>;
+  if (error) return <p className="admin-error" role="alert">{error}</p>;
+  if (!data)  return <p className="admin-loading" role="status">Loading dashboard...</p>;
 
   return (
     <div className="admin-stats-grid">
-      <StatCard label="Total Users"            value={data.totalUsers} />
-      <StatCard label="Today Initiated"        value={data.todayTransfersInitiated} />
-      <StatCard label="Today Settled"          value={data.todayTransfersSettled} />
-      <StatCard label="Today Volume"           value={`₹${Number(data.todayTransactionVolume).toFixed(2)}`} />
-      <StatCard label="Pending Settlement"     value={`₹${Number(data.totalPendingSettlementAmount).toFixed(2)}`} />
-      <StatCard label="Pending Fraud Alerts"   value={data.pendingFraudAlertsCount} />
+      <StatCard label="Total users" value={data.totalUsers} detail="Registered accounts" />
+      <StatCard label="Transfers initiated" value={data.todayTransfersInitiated} detail="Today" />
+      <StatCard label="Transfers settled" value={data.todayTransfersSettled} detail="Today" />
+      <StatCard label="Transaction volume" value={`₹${Number(data.todayTransactionVolume).toFixed(2)}`} detail="Today" />
+      <StatCard label="Pending settlement" value={`₹${Number(data.totalPendingSettlementAmount).toFixed(2)}`} detail="Awaiting processing" />
+      <StatCard label="Fraud alerts" value={data.pendingFraudAlertsCount} detail="Pending review" />
     </div>
   );
 }
 
-function StatCard({ label, value }) {
+function StatCard({ label, value, detail }) {
   return (
     <div className="admin-stat-card">
       <span className="admin-stat-label">{label}</span>
       <span className="admin-stat-value">{value}</span>
+      <span className="admin-stat-detail">{detail}</span>
     </div>
   );
 }
@@ -101,7 +110,7 @@ function AdminUsers() {
     } catch (e) { setError(e.message); }
   }
 
-  if (error) return <p className="admin-error">{error}</p>;
+  if (error) return <p className="admin-error" role="alert">{error}</p>;
 
   return (
     <>
@@ -114,7 +123,9 @@ function AdminUsers() {
           </tr>
         </thead>
         <tbody>
-          {users.map((u) => (
+          {users.length === 0 ? (
+            <tr><td colSpan={6} className="admin-empty">No users found</td></tr>
+          ) : users.map((u) => (
             <tr key={u.userId}>
               <td>{u.name}</td>
               <td>{u.email}</td>
@@ -149,8 +160,8 @@ function AdminTransactions() {
     fetchAdminTransactions(page).then(setData).catch((e) => setError(e.message));
   }, [page]);
 
-  if (error) return <p className="admin-error">{error}</p>;
-  if (!data)  return <p className="admin-loading">Loading...</p>;
+  if (error) return <p className="admin-error" role="alert">{error}</p>;
+  if (!data)  return <p className="admin-loading" role="status">Loading transactions...</p>;
 
   return (
     <>
@@ -202,7 +213,7 @@ function AdminSettlements() {
     } catch (e) { setError(e.message); }
   }
 
-  if (error) return <p className="admin-error">{error}</p>;
+  if (error) return <p className="admin-error" role="alert">{error}</p>;
 
   return (
     <>
@@ -259,7 +270,7 @@ function AdminFraudAlerts() {
     } catch (e) { setError(e.message); }
   }
 
-  if (error) return <p className="admin-error">{error}</p>;
+  if (error) return <p className="admin-error" role="alert">{error}</p>;
 
   return (
     <table className="admin-table">
@@ -303,7 +314,7 @@ function AdminJobs() {
     fetchRecentJobs().then(setJobs).catch((e) => setError(e.message));
   }, []);
 
-  if (error) return <p className="admin-error">{error}</p>;
+  if (error) return <p className="admin-error" role="alert">{error}</p>;
 
   return (
     <table className="admin-table">

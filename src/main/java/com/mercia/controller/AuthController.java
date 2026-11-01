@@ -1,9 +1,15 @@
 package com.mercia.controller;
 
+import java.time.Duration;
+
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.ResponseCookie;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -35,6 +41,20 @@ public class AuthController {
 	public ResponseEntity<String> register(@Valid @RequestBody RegisterRequest register)
 	{
 		return authService.register(register);
+	}
+
+	@RequestMapping(path = "/logout", method = { RequestMethod.GET, RequestMethod.POST })
+	public ResponseEntity<Void> logout() {
+		ResponseCookie cookie = ResponseCookie.from("token", "")
+				.httpOnly(true)
+				.secure(false)
+				.path("/")
+				.sameSite("Strict")
+				.maxAge(Duration.ZERO)
+				.build();
+		return ResponseEntity.noContent()
+				.header(HttpHeaders.SET_COOKIE, cookie.toString())
+				.build();
 	}
 	
 	@GetMapping("/me")

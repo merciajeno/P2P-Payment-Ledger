@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { submitTransfer } from "../api";
+import { searchUser, submitTransfer } from "../api";
 import Field from "./Field";
 
 const STORAGE_KEY = "p2pLedgerPendingTransfer";
@@ -7,7 +7,11 @@ const STORAGE_KEY = "p2pLedgerPendingTransfer";
 const VALID_STATUSES = ["PENDING", "SUCCESS", "FAILED", "DECLINED"];
 
 export default function SendMoney({ onBack, onBalanceChange, onSessionExpired }) {
+  const [recipientQuery, setRecipientQuery] = useState("");
   const [receiverEmail, setReceiverEmail] = useState("");
+  const [recipient, setRecipient] = useState(null);
+  const [searchingRecipient, setSearchingRecipient] = useState(false);
+  const [recipientSearchMessage, setRecipientSearchMessage] = useState("");
   const [amount, setAmount] = useState("");
   const [pin, setPin] = useState("");
   const [payment, setPayment] = useState(null);
@@ -84,7 +88,9 @@ export default function SendMoney({ onBack, onBalanceChange, onSessionExpired })
       sessionStorage.removeItem(STORAGE_KEY);
       setPayment(null);
       setStatus(result.transactionStatus);
+      setRecipientQuery("");
       setReceiverEmail("");
+      setRecipient(null);
       setAmount("");
       setPin("");
       setReviewing(false);
@@ -134,11 +140,49 @@ export default function SendMoney({ onBack, onBalanceChange, onSessionExpired })
     setPayment(null);
     setStatus(null);
     setNotice("");
+    setRecipientQuery("");
     setReceiverEmail("");
+    setRecipient(null);
     setAmount("");
     setPin("");
     setReviewing(false);
     setEnteringPin(false);
+  }
+
+  async function findRecipient() {
+    const query = recipientQuery.trim();
+    if (!query) {
+      setRecipientSearchMessage("Enter an email address or phone number.");
+      return;
+    }
+
+    setSearchingRecipient(true);
+    setRecipientSearchMessage("");
+    setRecipient(null);
+    setReceiverEmail("");
+    try {
+      const result = await searchUser(query);
+      if (result === null) {
+        setRecipientSearchMessage("No account found for that email or phone number.");
+      } else {
+        setRecipient(result);
+        setReceiverEmail(result.email);
+      }
+    } catch (error) {
+      setRecipientSearchMessage(error.message);
+    } finally {
+      setSearchingRecipient(false);
+    }
+  }
+
+  function reviewPayment(event) {
+    event.preventDefault();
+    setNotice("");
+    if (!recipient) {
+      setRecipientSearchMessage("Search for and select a recipient before continuing.");
+      return;
+    }
+    setReviewing(true);
   }
 
   if (loading) return <p role="status">Checking pending payments...</p>;
@@ -232,16 +276,54 @@ export default function SendMoney({ onBack, onBalanceChange, onSessionExpired })
       ) : (
         <form
           className="auth-form"
-          onSubmit={(e) => { e.preventDefault(); setNotice(""); setReviewing(true); }}
+          onSubmit={reviewPayment}
         >
-          <Field
-            label="Recipient email"
-            type="email"
-            value={receiverEmail}
-            onChange={(e) => setReceiverEmail(e.target.value)}
-            placeholder="recipient@example.com"
-            required
-          />
+          <div className="recipient-search">
+            <Field
+              label="Find recipient"
+              type="text"
+              autoComplete="email"
+              disabled={searchingRecipient}
+              value={recipientQuery}
+              onChange={(e) => {
+                setRecipientQuery(e.target.value);
+                setRecipient(null);
+                setReceiverEmail("");
+                setRecipientSearchMessage("");
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  findRecipient();
+                }
+              }}
+              placeholder="Email address or phone number"
+              required
+            />
+            <button
+              type="button"
+              className="recipient-search-button"
+              disabled={searchingRecipient || !recipientQuery.trim()}
+              onClick={findRecipient}
+            >
+              {searchingRecipient ? "Searching..." : "Search"}
+            </button>
+          </div>
+          {recipientSearchMessage && (
+            <p className="recipient-search-message" role="status">{recipientSearchMessage}</p>
+          )}
+          {recipient && (
+            <div className="recipient-result" role="status">
+              <span className="recipient-avatar" aria-hidden="true">
+                {recipient.name.trim().charAt(0).toUpperCase()}
+              </span>
+              <span>
+                <strong>{recipient.name}</strong>
+                <span>{recipient.email}</span>
+              </span>
+              <span className="recipient-verified">Selected</span>
+            </div>
+          )}
           <Field
             label="Amount (₹)"
             type="number"
@@ -252,7 +334,7 @@ export default function SendMoney({ onBack, onBalanceChange, onSessionExpired })
             placeholder="0.00"
             required
           />
-          <button type="submit" className="submit-button">
+          <button type="submit" className="submit-button" disabled={!recipient}>
             Review payment
           </button>
         </form>

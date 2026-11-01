@@ -16,6 +16,19 @@ function formatDate(value) {
   return new Date(value).toLocaleString();
 }
 
+export async function fetchTransactionHistory(page = 0, status = null, from = null, to = null) {
+  try {
+    const params = { page };
+    if (status) params.status = status;
+    if (from) params.from = from;
+    if (to) params.to = to;
+    const response = await api.get("/transactions", { params });
+    return response.data;
+  } catch (error) {
+    throw new Error(getErrorMessage(error, "Could not load transaction history."));
+  }
+}
+
 export default function TransactionHistoryPage() {
   const [history, setHistory] = useState(null);
   const [page, setPage] = useState(0);
