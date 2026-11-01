@@ -7,15 +7,15 @@ import java.util.Optional;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import com.mercia.enums.LedgerEntryReason;
+import com.mercia.enums.LedgerEntryType;
+import com.mercia.enums.Status;
+import com.mercia.enums.TransactionStatus;
+import com.mercia.enums.WalletStatus;
 import com.mercia.exception.UserNotFoundException;
-import com.mercia.model.LedgerEntryReason;
-import com.mercia.model.LedgerEntryType;
-import com.mercia.model.Status;
 import com.mercia.model.Transaction;
-import com.mercia.model.TransactionStatus;
 import com.mercia.model.User;
 import com.mercia.model.Wallet;
-import com.mercia.model.WalletStatus;
 import com.mercia.repository.TransactionRepository;
 import com.mercia.repository.UserRepository;
 import com.mercia.repository.WalletRepository;
@@ -28,8 +28,7 @@ import lombok.extern.slf4j.Slf4j;
 @AllArgsConstructor
 @Slf4j
 public class TransactionService {
-
-	private static final BigDecimal MinAmount = new BigDecimal(8000.0);
+	
 	private final TransactionRepository transactionRepo;
 	private final UserRepository userRepo;
 	private final WalletRepository walletRepo;
@@ -139,7 +138,7 @@ public class TransactionService {
 		transaction.setRemark(remark);
 
 		// Save first so the transaction has a database ID
-		transactionRepo.save(transaction);
+		transactionRepo.saveAndFlush(transaction);
 		
 		// checking if greater than 8k
 		fraudDetectionService.checkHighValue(senderWallet, transaction);

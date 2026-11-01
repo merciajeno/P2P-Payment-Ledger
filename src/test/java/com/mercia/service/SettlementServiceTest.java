@@ -18,12 +18,12 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.mercia.model.BatchStatus;
+import com.mercia.enums.BatchStatus;
+import com.mercia.enums.TransactionStatus;
+import com.mercia.enums.WalletStatus;
 import com.mercia.model.Transaction;
-import com.mercia.model.TransactionStatus;
 import com.mercia.model.User;
 import com.mercia.model.Wallet;
-import com.mercia.model.WalletStatus;
 import com.mercia.repository.SettlementBatchRepository;
 import com.mercia.repository.TransactionRepository;
 import com.mercia.repository.WalletRepository;
@@ -78,7 +78,7 @@ class SettlementServiceTest {
 		verify(walletRepo).save(transaction.getReceiverWallet());
 		verify(dailyWalletSummaryService).recordIncoming(transaction.getReceiverWallet(), transaction.getAmount());
 		verify(ledgerService).recordEntry(transaction.getReceiverWallet(), transaction,
-				com.mercia.model.LedgerEntryType.CREDIT, com.mercia.model.LedgerEntryReason.SETTLEMENT,
+				com.mercia.enums.LedgerEntryType.CREDIT, com.mercia.enums.LedgerEntryReason.SETTLEMENT,
 				transaction.getAmount(), "Transfer received");
 		verify(notificationService).send(transaction.getSenderWallet().getUser(),
 				"₹50.00 transfer to receiver has been settled");
@@ -101,7 +101,7 @@ class SettlementServiceTest {
 		assertEquals(BatchStatus.SUCCESS, batch.status());
 		assertEquals(1, batch.declinedCount());
 		verify(ledgerService).recordEntry(transaction.getSenderWallet(), transaction,
-				com.mercia.model.LedgerEntryType.CREDIT, com.mercia.model.LedgerEntryReason.REFUND,
+				com.mercia.enums.LedgerEntryType.CREDIT, com.mercia.enums.LedgerEntryReason.REFUND,
 				transaction.getAmount(), "Transfer refund - receiver wallet is inactive");
 	}
 

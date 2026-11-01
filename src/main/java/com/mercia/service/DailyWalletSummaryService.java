@@ -7,8 +7,8 @@ import java.time.ZoneId;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.mercia.enums.FraudAlertType;
 import com.mercia.model.DailyWalletSummary;
-import com.mercia.model.FraudAlertType;
 import com.mercia.model.Wallet;
 import com.mercia.repository.DailyWalletSummaryRepository;
 

@@ -2,6 +2,9 @@ package com.mercia.model;
 
 import java.time.Instant;
 
+import com.mercia.enums.Role;
+import com.mercia.enums.Status;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;

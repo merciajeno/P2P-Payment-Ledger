@@ -2,6 +2,8 @@ package com.mercia.model;
 
 import java.math.BigDecimal;
 
+import com.mercia.enums.WalletStatus;
+
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;

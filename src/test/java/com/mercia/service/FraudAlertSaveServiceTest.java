@@ -15,10 +15,10 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.mercia.enums.FraudAlertStatus;
+import com.mercia.enums.FraudAlertType;
+import com.mercia.enums.Role;
 import com.mercia.model.FraudAlert;
-import com.mercia.model.FraudAlertStatus;
-import com.mercia.model.FraudAlertType;
-import com.mercia.model.Role;
 import com.mercia.model.Transaction;
 import com.mercia.model.User;
 import com.mercia.model.Wallet;

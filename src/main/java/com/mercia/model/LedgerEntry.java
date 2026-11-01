@@ -3,6 +3,9 @@ package com.mercia.model;
 import java.math.BigDecimal;
 import java.time.Instant;
 
+import com.mercia.enums.LedgerEntryReason;
+import com.mercia.enums.LedgerEntryType;
+
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;

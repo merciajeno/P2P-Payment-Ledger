@@ -8,8 +8,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import com.mercia.enums.TransactionStatus;
 import com.mercia.model.DailySummary;
-import com.mercia.model.TransactionStatus;
 
 public interface DailySummaryRepository
         extends JpaRepository<DailySummary, Long> {

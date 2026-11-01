@@ -8,9 +8,9 @@ import java.time.ZoneId;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.mercia.enums.Role;
+import com.mercia.enums.TransactionStatus;
 import com.mercia.model.DailySummary;
-import com.mercia.model.Role;
-import com.mercia.model.TransactionStatus;
 import com.mercia.repository.DailySummaryRepository;
 import com.mercia.repository.FraudAlertRepository;
 import com.mercia.repository.UserRepository;

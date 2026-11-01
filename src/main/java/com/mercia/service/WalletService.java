@@ -3,9 +3,9 @@ package com.mercia.service;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.mercia.enums.WalletStatus;
 import com.mercia.model.User;
 import com.mercia.model.Wallet;
-import com.mercia.model.WalletStatus;
 import com.mercia.repository.WalletRepository;
 
 import lombok.RequiredArgsConstructor;

@@ -24,8 +24,9 @@ public class SecurityConfig {
 	    .requestMatchers("/api/ledger/**").hasRole("USER")
 	    .requestMatchers("/transactions", "/transactions/**").hasRole("USER")
 	    .requestMatchers("/users/search").hasRole("USER")
-	    .requestMatchers("/notifications/**").hasRole("USER")
+	    .requestMatchers("/notifications/**").authenticated()
 	    .requestMatchers("/admin/**").hasRole("ADMIN")
+	    .requestMatchers("/me").authenticated()
 	    .anyRequest().authenticated());
 
 		return http.build();

@@ -8,9 +8,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import com.mercia.dto.LedgerHistoryEntryResponse;
+import com.mercia.enums.LedgerEntryReason;
+import com.mercia.enums.LedgerEntryType;
 import com.mercia.model.LedgerEntry;
-import com.mercia.model.LedgerEntryReason;
-import com.mercia.model.LedgerEntryType;
 import com.mercia.model.Transaction;
 import com.mercia.model.Wallet;
 import com.mercia.repository.LedgerEntryRepository;

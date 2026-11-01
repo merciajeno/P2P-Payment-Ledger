@@ -3,6 +3,9 @@ package com.mercia.model;
 import java.math.BigDecimal;
 import java.time.Instant;
 
+import com.mercia.enums.FraudAlertStatus;
+import com.mercia.enums.FraudAlertType;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;

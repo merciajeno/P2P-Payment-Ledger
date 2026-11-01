@@ -13,9 +13,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.mercia.enums.WalletStatus;
 import com.mercia.model.User;
 import com.mercia.model.Wallet;
-import com.mercia.model.WalletStatus;
 import com.mercia.repository.WalletRepository;
 
 @ExtendWith(MockitoExtension.class)

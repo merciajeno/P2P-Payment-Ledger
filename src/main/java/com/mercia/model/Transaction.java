@@ -3,6 +3,8 @@ package com.mercia.model;
 import java.math.BigDecimal;
 import java.time.Instant;
 
+import com.mercia.enums.TransactionStatus;
+
 import jakarta.persistence.*;
 
 import lombok.Getter;

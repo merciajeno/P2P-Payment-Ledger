@@ -21,8 +21,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.mercia.enums.FraudAlertType;
 import com.mercia.model.DailyWalletSummary;
-import com.mercia.model.FraudAlertType;
 import com.mercia.model.User;
 import com.mercia.model.Wallet;
 import com.mercia.repository.DailyWalletSummaryRepository;

@@ -5,7 +5,7 @@ import java.time.Instant;
 
 import org.springframework.stereotype.Service;
 
-import com.mercia.model.FraudAlertType;
+import com.mercia.enums.FraudAlertType;
 import com.mercia.model.Transaction;
 import com.mercia.model.Wallet;
 import com.mercia.repository.TransactionRepository;
@@ -69,6 +69,7 @@ public class FraudDetectionService {
             );
             log.info("High-value alert created for transaction {}", transaction.getId());
             // No throw — transaction continues to PENDING normally
+            
         }
     }
    

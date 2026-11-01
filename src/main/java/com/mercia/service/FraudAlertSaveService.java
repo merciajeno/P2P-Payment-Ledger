@@ -6,9 +6,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.mercia.enums.FraudAlertType;
+import com.mercia.enums.Role;
 import com.mercia.model.FraudAlert;
-import com.mercia.model.FraudAlertType;
-import com.mercia.model.Role;
 import com.mercia.model.Transaction;
 import com.mercia.model.Wallet;
 import com.mercia.repository.FraudAlertRepository;

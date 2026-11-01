@@ -7,14 +7,14 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.mercia.model.BatchStatus;
-import com.mercia.model.LedgerEntryReason;
-import com.mercia.model.LedgerEntryType;
+import com.mercia.enums.BatchStatus;
+import com.mercia.enums.LedgerEntryReason;
+import com.mercia.enums.LedgerEntryType;
+import com.mercia.enums.TransactionStatus;
+import com.mercia.enums.WalletStatus;
 import com.mercia.model.SettlementBatch;
 import com.mercia.model.Transaction;
-import com.mercia.model.TransactionStatus;
 import com.mercia.model.Wallet;
-import com.mercia.model.WalletStatus;
 import com.mercia.repository.SettlementBatchRepository;
 import com.mercia.repository.TransactionRepository;
 import com.mercia.repository.WalletRepository;
@@ -95,7 +95,7 @@ public class SettlementService {
 
 
     @Transactional
-    private boolean settleOneTransaction(Transaction transaction) {
+    public boolean settleOneTransaction(Transaction transaction) {
 
         Wallet receiverWallet = transaction.getReceiverWallet();
 

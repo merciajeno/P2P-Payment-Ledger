@@ -6,9 +6,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import com.mercia.enums.FraudAlertStatus;
+import com.mercia.enums.FraudAlertType;
 import com.mercia.model.FraudAlert;
-import com.mercia.model.FraudAlertStatus;
-import com.mercia.model.FraudAlertType;
 
 public interface FraudAlertRepository
         extends JpaRepository<FraudAlert, Long> {
@@ -41,5 +41,8 @@ public interface FraudAlertRepository
         @Param("start") java.time.Instant start,
         @Param("end") java.time.Instant end
     );
+    
+    long countByStatus(FraudAlertStatus status);
+
 
 }

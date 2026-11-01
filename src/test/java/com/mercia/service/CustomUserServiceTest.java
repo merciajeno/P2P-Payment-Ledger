@@ -14,8 +14,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import com.mercia.enums.Role;
 import com.mercia.exception.UserNotFoundException;
-import com.mercia.model.Role;
 import com.mercia.model.User;
 import com.mercia.repository.UserRepository;
 

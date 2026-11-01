@@ -23,9 +23,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.mercia.enums.Role;
+import com.mercia.enums.TransactionStatus;
 import com.mercia.model.DailySummary;
-import com.mercia.model.Role;
-import com.mercia.model.TransactionStatus;
 import com.mercia.model.User;
 import com.mercia.repository.DailySummaryRepository;
 import com.mercia.repository.FraudAlertRepository;

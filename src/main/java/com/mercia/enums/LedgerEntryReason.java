@@ -1,4 +1,4 @@
-package com.mercia.model;
+package com.mercia.enums;
 
 public enum LedgerEntryReason {
     DEPOSIT,

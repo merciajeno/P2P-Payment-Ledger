@@ -13,13 +13,13 @@ import org.springframework.stereotype.Service;
 
 import com.mercia.dto.LoginRequest;
 import com.mercia.dto.RegisterRequest;
+import com.mercia.enums.Role;
+import com.mercia.enums.Status;
+import com.mercia.enums.WalletStatus;
 import com.mercia.exception.InvalidPasswordException;
 import com.mercia.exception.UserNotFoundException;
-import com.mercia.model.Role;
-import com.mercia.model.Status;
 import com.mercia.model.User;
 import com.mercia.model.Wallet;
-import com.mercia.model.WalletStatus;
 import com.mercia.repository.UserRepository;
 import com.mercia.repository.WalletRepository;
 

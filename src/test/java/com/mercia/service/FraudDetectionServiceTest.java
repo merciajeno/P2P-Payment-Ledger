@@ -14,7 +14,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.mercia.model.FraudAlertType;
+import com.mercia.enums.FraudAlertType;
 import com.mercia.model.Transaction;
 import com.mercia.model.User;
 import com.mercia.model.Wallet;
