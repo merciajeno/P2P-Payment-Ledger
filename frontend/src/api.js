@@ -125,9 +125,14 @@ export async function submitTransfer(requestBody) {
   }
 }
 
-export async function fetchLedgerHistory(page = 0) {
+export async function fetchLedgerHistory(page = 0, filters = {}) {
   try {
-    const response = await api.get("/api/ledger/history", { params: { page } });
+    const params = { page };
+    if (filters.from) params.from = filters.from;
+    if (filters.to) params.to = filters.to;
+    if (filters.type && filters.type !== "ALL") params.type = filters.type;
+    if (filters.status && filters.status !== "ALL") params.status = filters.status;
+    const response = await api.get("/api/ledger/history", { params });
     return response.data;
   } catch (error) {
     throw new Error(getErrorMessage(error, "Could not load transaction history."));

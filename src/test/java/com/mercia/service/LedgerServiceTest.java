@@ -7,6 +7,7 @@ import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
@@ -22,6 +23,8 @@ import org.springframework.data.domain.PageRequest;
 import com.mercia.dto.LedgerHistoryEntryResponse;
 import com.mercia.enums.LedgerEntryReason;
 import com.mercia.enums.LedgerEntryType;
+import com.mercia.enums.LedgerHistoryType;
+import com.mercia.enums.TransactionStatus;
 import com.mercia.model.LedgerEntry;
 import com.mercia.model.Transaction;
 import com.mercia.model.Wallet;
@@ -66,7 +69,7 @@ class LedgerServiceTest {
 		entry.setAmount(new BigDecimal("18.25"));
 		entry.setCreatedAt(createdAt);
 		entry.setDescription("Wallet deposit");
-		when(ledgerRepo.findByWalletIdOrderByCreatedAtDesc(9L, PageRequest.of(2, 10)))
+		when(ledgerRepo.findWalletHistoryFiltered(9L, "ALL", null, null, null, PageRequest.of(2, 10)))
 				.thenReturn(new PageImpl<>(List.of(entry), PageRequest.of(2, 10), 21));
 
 		Page<LedgerHistoryEntryResponse> result = ledgerService.getWalletHistory(9L, 2);
@@ -75,12 +78,52 @@ class LedgerServiceTest {
 		assertEquals(10, result.getSize());
 		assertEquals(21, result.getTotalElements());
 		assertEquals(new LedgerHistoryEntryResponse(7L, LedgerEntryType.CREDIT,
-				LedgerEntryReason.DEPOSIT, new BigDecimal("18.25"), createdAt, "Wallet deposit"),
+				LedgerEntryReason.DEPOSIT, new BigDecimal("18.25"), createdAt, "Wallet deposit",
+				null, TransactionStatus.SUCCESS, null),
 				result.getContent().get(0));
 		ArgumentCaptor<org.springframework.data.domain.Pageable> pageableCaptor =
 				ArgumentCaptor.forClass(org.springframework.data.domain.Pageable.class);
-		verify(ledgerRepo).findByWalletIdOrderByCreatedAtDesc(org.mockito.ArgumentMatchers.eq(9L),
+		verify(ledgerRepo).findWalletHistoryFiltered(org.mockito.ArgumentMatchers.eq(9L),
+				org.mockito.ArgumentMatchers.eq("ALL"), org.mockito.ArgumentMatchers.isNull(),
+				org.mockito.ArgumentMatchers.isNull(), org.mockito.ArgumentMatchers.isNull(),
 				pageableCaptor.capture());
 		assertEquals(PageRequest.of(2, 10), pageableCaptor.getValue());
+	}
+
+	@Test
+	void getWalletHistoryPassesFiltersAndMapsPendingTransferDetails() {
+		Instant createdAt = Instant.parse("2026-01-02T03:04:05Z");
+		Instant dueAt = createdAt.plusSeconds(60);
+		Wallet wallet = new Wallet();
+		wallet.setId(9L);
+		Wallet receiver = new Wallet();
+		receiver.setId(10L);
+		Transaction transaction = new Transaction();
+		transaction.setSenderWallet(wallet);
+		transaction.setReceiverWallet(receiver);
+		transaction.setCreatedAt(createdAt);
+		transaction.setSettlementDueAt(dueAt);
+		transaction.setStatus(TransactionStatus.PENDING);
+		LedgerEntry entry = new LedgerEntry();
+		entry.setId(8L);
+		entry.setWallet(wallet);
+		entry.setTransaction(transaction);
+		entry.setEntryType(LedgerEntryType.DEBIT);
+		entry.setReason(LedgerEntryReason.TRANSFER);
+		entry.setAmount(new BigDecimal("12.00"));
+		entry.setCreatedAt(createdAt);
+		when(ledgerRepo.findWalletHistoryFiltered(
+				9L, "SENT", TransactionStatus.PENDING,
+				Instant.parse("2026-01-01T18:30:00Z"),
+				Instant.parse("2026-01-02T18:30:00Z"), PageRequest.of(0, 10)))
+				.thenReturn(new PageImpl<>(List.of(entry)));
+
+		Page<LedgerHistoryEntryResponse> result = ledgerService.getWalletHistory(
+				9L, 0, LedgerHistoryType.SENT, TransactionStatus.PENDING,
+				LocalDate.parse("2026-01-02"), LocalDate.parse("2026-01-02"));
+
+		assertEquals("SENT", result.getContent().get(0).transferType());
+		assertEquals(TransactionStatus.PENDING, result.getContent().get(0).status());
+		assertEquals(dueAt, result.getContent().get(0).settlementDueAt());
 	}
 }

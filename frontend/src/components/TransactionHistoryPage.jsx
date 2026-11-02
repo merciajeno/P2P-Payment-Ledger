@@ -12,35 +12,32 @@ function formatLabel(value) {
   return value.toLowerCase().replaceAll("_", " ");
 }
 
-function formatDate(value) {
-  return new Date(value).toLocaleString();
+function formatStatus(value) {
+  return value.charAt(0) + value.slice(1).toLowerCase();
 }
 
-export async function fetchTransactionHistory(page = 0, status = null, from = null, to = null) {
-  try {
-    const params = { page };
-    if (status) params.status = status;
-    if (from) params.from = from;
-    if (to) params.to = to;
-    const response = await api.get("/transactions", { params });
-    return response.data;
-  } catch (error) {
-    throw new Error(getErrorMessage(error, "Could not load transaction history."));
-  }
+function formatDate(value) {
+  return new Date(value).toLocaleString();
 }
 
 export default function TransactionHistoryPage() {
   const [history, setHistory] = useState(null);
   const [page, setPage] = useState(0);
+  const [filters, setFilters] = useState({ from: "", to: "", type: "ALL", status: "ALL" });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  function updateFilter(name, value) {
+    setFilters((current) => ({ ...current, [name]: value }));
+    setPage(0);
+  }
 
   useEffect(() => {
     let active = true;
     setIsLoading(true);
     setError(null);
 
-    fetchLedgerHistory(page)
+    fetchLedgerHistory(page, filters)
       .then((result) => {
         if (active) {
           setHistory(result);
@@ -60,7 +57,7 @@ export default function TransactionHistoryPage() {
     return () => {
       active = false;
     };
-  }, [page]);
+  }, [page, filters]);
 
   return (
     <section className="transaction-history" aria-labelledby="transaction-history-title">
@@ -71,6 +68,46 @@ export default function TransactionHistoryPage() {
           <p>Wallet deposits, withdrawals, and transfers.</p>
         </div>
         {history && <span>{history.totalElements} entries</span>}
+      </div>
+
+      <div className="transaction-history-filters" aria-label="Filter transactions">
+        <label>
+          <span>From</span>
+          <input
+            type="date"
+            aria-label="Start date"
+            value={filters.from}
+            max={filters.to || undefined}
+            onChange={(event) => updateFilter("from", event.target.value)}
+          />
+        </label>
+        <label>
+          <span>To</span>
+          <input
+            type="date"
+            aria-label="End date"
+            value={filters.to}
+            min={filters.from || undefined}
+            onChange={(event) => updateFilter("to", event.target.value)}
+          />
+        </label>
+        <label>
+          <span>Type</span>
+          <select value={filters.type} onChange={(event) => updateFilter("type", event.target.value)}>
+            <option value="ALL">All types</option>
+            <option value="SENT">Sent</option>
+            <option value="RECEIVED">Received</option>
+          </select>
+        </label>
+        <label>
+          <span>Status</span>
+          <select value={filters.status} onChange={(event) => updateFilter("status", event.target.value)}>
+            <option value="ALL">All statuses</option>
+            <option value="SUCCESS">Success</option>
+            <option value="PENDING">Pending</option>
+            <option value="FAILED">Failed</option>
+          </select>
+        </label>
       </div>
 
       {error && <div className="notice notice-error" role="alert">{error}</div>}
@@ -85,6 +122,17 @@ export default function TransactionHistoryPage() {
                   <strong>{formatLabel(entry.reason)}</strong>
                   <span>{entry.description || formatLabel(entry.entryType)}</span>
                   <time dateTime={entry.createdAt}>{formatDate(entry.createdAt)}</time>
+                  {entry.transferType && <span>{formatLabel(entry.transferType)}</span>}
+                  {entry.status && (
+                    <span className={`ledger-status ledger-status-${entry.status.toLowerCase()}`}>
+                      Current status: {formatStatus(entry.status)}
+                    </span>
+                  )}
+                  {entry.status === "PENDING" && entry.settlementDueAt && (
+                    <span className="ledger-settlement-date">
+                      Expected settlement: <time dateTime={entry.settlementDueAt}>{formatDate(entry.settlementDueAt)}</time>
+                    </span>
+                  )}
                 </div>
                 <div className="ledger-history-side">
                   <strong className={entry.entryType === "CREDIT" ? "ledger-credit" : "ledger-debit"}>
@@ -113,7 +161,7 @@ export default function TransactionHistoryPage() {
           </div>
         </>
       ) : !error ? (
-        <p className="ledger-history-message">No transactions yet.</p>
+        <p className="ledger-history-message">No transactions match these filters.</p>
       ) : null}
     </section>
   );

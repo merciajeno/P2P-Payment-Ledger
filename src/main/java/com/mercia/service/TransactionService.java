@@ -78,6 +78,7 @@ public class TransactionService {
 		if (sender.getStatus() != Status.ACTIVE || receiver.getStatus() != Status.ACTIVE) {
 			throw new IllegalStateException("Both users must be active");
 		}
+		
 
 		if (sender.getId().equals(receiver.getId())) {
 			throw new IllegalArgumentException("Cannot transfer money to yourself");
@@ -102,6 +103,17 @@ public class TransactionService {
 			throw new IllegalStateException("Wallet not found");
 		}
 
+		if(senderWallet.getWalletStatus()!=WalletStatus.ACTIVE)
+		{
+			String senderWalletException = String.format("Your wallet is:%s", senderWallet.getWalletStatus().toString());
+			throw new IllegalStateException(senderWalletException);
+		}
+		
+		if(receiverWallet.getWalletStatus()!=WalletStatus.ACTIVE)
+		{
+			String receiverWalletException = String.format("Receiver wallet is:%s", senderWallet.getWalletStatus().toString());
+			throw new IllegalStateException(receiverWalletException);
+		}
 		fraudDetectionService.checkDuplicateTransfer(
 			    senderWallet.getId(),
 			    receiverWallet.getId(),

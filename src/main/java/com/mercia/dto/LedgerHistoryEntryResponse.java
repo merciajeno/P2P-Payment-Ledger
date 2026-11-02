@@ -5,6 +5,7 @@ import java.time.Instant;
 
 import com.mercia.enums.LedgerEntryReason;
 import com.mercia.enums.LedgerEntryType;
+import com.mercia.enums.TransactionStatus;
 
 public record LedgerHistoryEntryResponse(
 		Long id,
@@ -12,5 +13,8 @@ public record LedgerHistoryEntryResponse(
 		LedgerEntryReason reason,
 		BigDecimal amount,
 		Instant createdAt,
-		String description) {
+		String description,
+		String transferType,
+		TransactionStatus status,
+		Instant settlementDueAt) {
 }

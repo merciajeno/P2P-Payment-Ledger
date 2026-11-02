@@ -174,6 +174,34 @@ class TransactionServiceTest {
 	}
 
 	@Test
+	void makeTransferRejectsInactiveSenderWallet() {
+		prepareUsers();
+		when(passwordEncoder.matches("1234", sender.getPIN())).thenReturn(true);
+		senderWallet.setWalletStatus(WalletStatus.FROZEN);
+
+		assertThrows(IllegalStateException.class,
+				() -> transfer("request-1", sender.getEmail(), receiver.getEmail(), AMOUNT));
+
+		verifyNoInteractions(fraudDetectionService, dailyWalletSummaryService, ledgerService,
+				notificationService);
+		verify(walletRepo, never()).save(any(Wallet.class));
+	}
+
+	@Test
+	void makeTransferRejectsInactiveReceiverWallet() {
+		prepareUsers();
+		when(passwordEncoder.matches("1234", sender.getPIN())).thenReturn(true);
+		receiverWallet.setWalletStatus(WalletStatus.FROZEN);
+
+		assertThrows(IllegalStateException.class,
+				() -> transfer("request-1", sender.getEmail(), receiver.getEmail(), AMOUNT));
+
+		verifyNoInteractions(fraudDetectionService, dailyWalletSummaryService, ledgerService,
+				notificationService);
+		verify(walletRepo, never()).save(any(Wallet.class));
+	}
+
+	@Test
 	void makeTransferRejectsInsufficientBalance() {
 		prepareUsers();
 		senderWallet.setBalance(new BigDecimal("10.00"));

@@ -1,6 +1,9 @@
 package com.mercia.service;
 
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -10,6 +13,8 @@ import org.springframework.stereotype.Service;
 import com.mercia.dto.LedgerHistoryEntryResponse;
 import com.mercia.enums.LedgerEntryReason;
 import com.mercia.enums.LedgerEntryType;
+import com.mercia.enums.LedgerHistoryType;
+import com.mercia.enums.TransactionStatus;
 import com.mercia.model.LedgerEntry;
 import com.mercia.model.Transaction;
 import com.mercia.model.Wallet;
@@ -25,6 +30,7 @@ import lombok.extern.slf4j.Slf4j;
 public class LedgerService {
 
     private final LedgerEntryRepository ledgerRepo;
+    private static final ZoneId HISTORY_ZONE = ZoneId.of("Asia/Kolkata");
 
     @Transactional
     public void recordEntry(
@@ -51,16 +57,38 @@ public class LedgerService {
     public Page<LedgerHistoryEntryResponse> getWalletHistory(
             Long walletId, int page) {
 
+        return getWalletHistory(walletId, page, LedgerHistoryType.ALL, null, null, null);
+    }
+
+    @Transactional
+    public Page<LedgerHistoryEntryResponse> getWalletHistory(
+            Long walletId,
+            int page,
+            LedgerHistoryType type,
+            TransactionStatus status,
+            LocalDate from,
+            LocalDate to) {
+
         Pageable pageable = PageRequest.of(page, 10);
+        Instant fromInstant = from == null ? null : from.atStartOfDay(HISTORY_ZONE).toInstant();
+        Instant toInstant = to == null ? null : to.plusDays(1).atStartOfDay(HISTORY_ZONE).toInstant();
 
         return ledgerRepo
-            .findByWalletIdOrderByCreatedAtDesc(walletId, pageable)
-            .map(entry -> new LedgerHistoryEntryResponse(
-                    entry.getId(),
-                    entry.getEntryType(),
-                    entry.getReason(),
-                    entry.getAmount(),
-                    entry.getCreatedAt(),
-                    entry.getDescription()));
+            .findWalletHistoryFiltered(walletId, type.name(), status, fromInstant, toInstant, pageable)
+            .map(entry -> {
+                var transaction = entry.getTransaction();
+                boolean isTransfer = transaction != null;
+                boolean sent = isTransfer && transaction.getSenderWallet().getId().equals(walletId);
+                return new LedgerHistoryEntryResponse(
+                        entry.getId(),
+                        entry.getEntryType(),
+                        entry.getReason(),
+                        entry.getAmount(),
+                        entry.getCreatedAt(),
+                        entry.getDescription(),
+                        isTransfer ? sent ? "SENT" : "RECEIVED" : null,
+                        isTransfer ? transaction.getStatus() : TransactionStatus.SUCCESS,
+                        isTransfer ? transaction.getSettlementDueAt() : null);
+            });
     }
 }

@@ -431,6 +431,34 @@ h1 span {
   font-size: 12px;
 }
 
+.transaction-history-filters {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.transaction-history-filters label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.transaction-history-filters input,
+.transaction-history-filters select {
+  width: 100%;
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #171a1c;
+  color: #f1f2ed;
+  color-scheme: dark;
+  font-size: 11px;
+}
+
 .ledger-history-list {
   overflow: hidden;
   border: 1px solid var(--line);
@@ -469,6 +497,34 @@ h1 span {
 .ledger-history-side span {
   color: var(--muted);
   font-size: 10px;
+}
+
+.ledger-status {
+  width: fit-content;
+  padding: 3px 7px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  text-transform: capitalize;
+}
+
+.ledger-status-pending {
+  border-color: rgba(245, 190, 83, 0.4);
+  color: #f5be53 !important;
+}
+
+.ledger-status-success {
+  border-color: rgba(197, 244, 106, 0.35);
+  color: var(--lime) !important;
+}
+
+.ledger-status-failed,
+.ledger-status-declined {
+  border-color: rgba(243, 170, 162, 0.4);
+  color: #f3aaa2 !important;
+}
+
+.ledger-settlement-date {
+  color: #f5be53 !important;
 }
 
 .ledger-history-side {
@@ -525,6 +581,12 @@ h1 span {
 .ledger-history-pagination button:disabled {
   cursor: default;
   opacity: 0.45;
+}
+
+@media (max-width: 640px) {
+  .transaction-history-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .wallet-action-panel h1 {
