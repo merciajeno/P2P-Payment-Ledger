@@ -8,5 +8,8 @@ public record AdminDashboardResponse(
         long todayTransfersSettled,
         BigDecimal todayTransactionVolume,
         BigDecimal totalPendingSettlementAmount,
-        long pendingFraudAlertsCount
+        long pendingFraudAlertsCount,
+        BigDecimal todaySettledDebits,
+        BigDecimal todaySettledCredits,
+        boolean reconciliationPassed
 ) {}

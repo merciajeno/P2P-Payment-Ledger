@@ -39,7 +39,7 @@ class FraudAlertSaveServiceTest {
 	private FraudAlertSaveService fraudAlertSaveService;
 
 	@Test
-	void savePersistsAlertAndNotifiesEveryAdmin() {
+	void saveInCurrentTransactionPersistsAlertAndNotifiesEveryAdmin() {
 		Wallet wallet = new Wallet();
 		wallet.setId(8L);
 		Transaction transaction = new Transaction();
@@ -49,7 +49,8 @@ class FraudAlertSaveServiceTest {
 		User secondAdmin = admin("second@example.com");
 		when(userRepo.findByRole(Role.ADMIN)).thenReturn(List.of(firstAdmin, secondAdmin));
 
-		fraudAlertSaveService.save(wallet, transaction, FraudAlertType.HIGH_VALUE_TRANSACTION,
+		fraudAlertSaveService.saveInCurrentTransaction(
+				wallet, transaction, FraudAlertType.HIGH_VALUE_TRANSACTION,
 				amount, "High-value transfer");
 
 		ArgumentCaptor<FraudAlert> captor = ArgumentCaptor.forClass(FraudAlert.class);

@@ -21,8 +21,8 @@ public interface LedgerEntryRepository
             SELECT e FROM LedgerEntry e
             LEFT JOIN e.transaction t
             WHERE e.wallet.id = :walletId
-            AND (:from IS NULL OR COALESCE(t.createdAt, e.createdAt) >= :from)
-            AND (:to IS NULL OR COALESCE(t.createdAt, e.createdAt) < :to)
+            AND COALESCE(t.createdAt, e.createdAt) >= :from
+            AND COALESCE(t.createdAt, e.createdAt) < :to
             AND (:type = 'ALL'
                 OR (:type = 'SENT' AND t.senderWallet.id = :walletId)
                 OR (:type = 'RECEIVED' AND t.receiverWallet.id = :walletId))
@@ -38,8 +38,8 @@ public interface LedgerEntryRepository
             SELECT COUNT(e) FROM LedgerEntry e
             LEFT JOIN e.transaction t
             WHERE e.wallet.id = :walletId
-            AND (:from IS NULL OR COALESCE(t.createdAt, e.createdAt) >= :from)
-            AND (:to IS NULL OR COALESCE(t.createdAt, e.createdAt) < :to)
+            AND COALESCE(t.createdAt, e.createdAt) >= :from
+            AND COALESCE(t.createdAt, e.createdAt) < :to
             AND (:type = 'ALL'
                 OR (:type = 'SENT' AND t.senderWallet.id = :walletId)
                 OR (:type = 'RECEIVED' AND t.receiverWallet.id = :walletId))

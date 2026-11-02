@@ -16,13 +16,17 @@ import com.mercia.dto.AdminTransactionResponse;
 import com.mercia.dto.AdminUserResponse;
 import com.mercia.dto.FraudAlertResponse;
 import com.mercia.dto.SettlementBatchResponse;
+import com.mercia.enums.AdminAction;
 import com.mercia.enums.FraudAlertStatus;
 import com.mercia.enums.TransactionStatus;
 import com.mercia.enums.WalletStatus;
+import com.mercia.model.AuditLog;
 import com.mercia.model.FraudAlert;
 import com.mercia.model.Transaction;
 import com.mercia.model.User;
 import com.mercia.model.Wallet;
+import com.mercia.repository.AuditLogRepository;
+import com.mercia.repository.DailySummaryRepository;
 import com.mercia.repository.FraudAlertRepository;
 import com.mercia.repository.SettlementBatchRepository;
 import com.mercia.repository.TransactionRepository;
@@ -40,11 +44,27 @@ public class AdminService {
     private final UserRepository userRepo;
     private final WalletRepository walletRepo;
     private final TransactionRepository transactionRepo;
+    private final DailySummaryRepository dailySummaryRepo;
     private final FraudAlertRepository fraudAlertRepo;
     private final SettlementBatchRepository settlementBatchRepo;
     private final SettlementService settlementService;
     private final NotificationService notificationService;
     private static final ZoneId INDIA_ZONE = ZoneId.of("Asia/Kolkata");
+    private final AuditLogRepository auditLogRepo;
+
+    // audit log
+    @Transactional
+    private void audit(User admin, AdminAction action,
+            Long targetUserId, Long targetEntityId, String description) {
+        AuditLog log = new AuditLog();
+        log.setAdmin(admin);
+        log.setAction(action);
+        log.setTargetUserId(targetUserId);
+        log.setTargetEntityId(targetEntityId);
+        log.setDescription(description);
+        auditLogRepo.save(log);
+    }
+
 
     // ── Dashboard ──────────────────────────────────────────────────────
 
@@ -67,6 +87,10 @@ public class AdminService {
 
         BigDecimal totalPending = transactionRepo.sumPendingAmount();
 
+        BigDecimal todaySettledDebits = dailySummaryRepo.sumSettledDebits(startOfDay, endOfDay);
+        BigDecimal todaySettledCredits = dailySummaryRepo.sumSettledCredits(startOfDay, endOfDay);
+        boolean reconciliationPassed = todaySettledDebits.compareTo(todaySettledCredits) == 0;
+
         long pendingFraudAlerts = fraudAlertRepo
                 .countByStatus(FraudAlertStatus.PENDING);
 
@@ -76,7 +100,10 @@ public class AdminService {
                 todaySettled,
                 todayVolume,
                 totalPending,
-                pendingFraudAlerts
+                pendingFraudAlerts,
+                todaySettledDebits,
+                todaySettledCredits,
+                reconciliationPassed
         );
     }
 
@@ -89,19 +116,23 @@ public class AdminService {
     }
 
     @Transactional
-    public void freezeWallet(Long userId) {
+    public void freezeWallet(Long userId,User admin) {
         Wallet wallet = getWalletByUserId(userId);
         wallet.setWalletStatus(WalletStatus.FROZEN);
         walletRepo.save(wallet);
         log.info("Admin froze wallet for user {}", userId);
+        audit(admin, AdminAction.FREEZE_WALLET, userId, null,
+                "Froze wallet for user " + wallet.getUser().getEmail());
     }
 
     @Transactional
-    public void unfreezeWallet(Long userId) {
+    public void unfreezeWallet(Long userId,User admin) {
         Wallet wallet = getWalletByUserId(userId);
         wallet.setWalletStatus(WalletStatus.ACTIVE);
         walletRepo.save(wallet);
         log.info("Admin unfroze wallet for user {}", userId);
+        audit(admin, AdminAction.UNFREEZE_WALLET, userId, null,
+                "Unfroze wallet for user " + wallet.getUser().getEmail());
     }
 
     // ── Transaction Monitoring ─────────────────────────────────────────
@@ -123,7 +154,7 @@ public class AdminService {
     }
 
     @Transactional
-    public void manualSettle(Long transactionId) {
+    public void manualSettle(Long transactionId,User admin) {
         Transaction transaction = transactionRepo.findById(transactionId)
                 .orElseThrow(() -> new IllegalArgumentException("Transaction not found"));
 
@@ -133,6 +164,8 @@ public class AdminService {
 
         settlementService.settleOneTransaction(transaction);
         log.info("Admin manually settled transaction {}", transactionId);
+        audit(admin, AdminAction.MANUAL_SETTLE, null, transactionId,
+                "Manually settled transaction #" + transactionId);
     }
 
     // ── Fraud Review ───────────────────────────────────────────────────
@@ -146,7 +179,7 @@ public class AdminService {
     }
 
     @Transactional
-    public void blockTransaction(Long alertId) {
+    public void blockTransaction(Long alertId,User admin) {
         FraudAlert alert = getFraudAlert(alertId);
         Transaction transaction = alert.getTransaction();
 
@@ -179,15 +212,21 @@ public class AdminService {
 
 
         log.info("Admin blocked transaction {} via alert {}", transaction.getId(), alertId);
+        audit(admin, AdminAction.BLOCK_TRANSACTION,
+                senderWallet.getUser().getId(), transaction.getId(),
+                "Blocked transaction #" + transaction.getId() + " via alert #" + alertId);
     }
 
     @Transactional
-    public void dismissAlert(Long alertId) {
+    public void dismissAlert(Long alertId,User admin) {
         FraudAlert alert = getFraudAlert(alertId);
         alert.setStatus(FraudAlertStatus.DISMISSED);
         alert.setResolvedAt(Instant.now());
         fraudAlertRepo.save(alert);
         log.info("Admin dismissed alert {}", alertId);
+        
+        audit(admin, AdminAction.DISMISS_ALERT, null, alertId,
+                "Dismissed fraud alert #" + alertId);
     }
 
     // ── Job Monitor ────────────────────────────────────────────────────

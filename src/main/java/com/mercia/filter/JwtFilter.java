@@ -11,6 +11,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import io.jsonwebtoken.JwtException;
 import com.mercia.service.JwtService;
 
 import jakarta.servlet.FilterChain;
@@ -45,18 +46,22 @@ public class JwtFilter extends OncePerRequestFilter{
 				}
 			}
 		}
-		log.debug("Token:" + token);
 		if (token == null) {
 			filterChain.doFilter(request, response);
 			return;
 		}
 		
-		String username = jwtService.extractUsername(token);
-		UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-		Authentication authentication = new UsernamePasswordAuthenticationToken(userDetails, null,
-				userDetails.getAuthorities());
-		SecurityContext context = SecurityContextHolder.getContext();
-		context.setAuthentication(authentication);
+		try {
+			String username = jwtService.extractUsername(token);
+			UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+			Authentication authentication = new UsernamePasswordAuthenticationToken(userDetails, null,
+					userDetails.getAuthorities());
+			SecurityContext context = SecurityContextHolder.getContext();
+			context.setAuthentication(authentication);
+		} catch (JwtException exception) {
+			log.debug("Ignoring invalid or expired authentication token");
+			SecurityContextHolder.clearContext();
+		}
 		filterChain.doFilter(request, response);
 	}
 

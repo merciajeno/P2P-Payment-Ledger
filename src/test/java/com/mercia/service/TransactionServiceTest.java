@@ -235,6 +235,24 @@ class TransactionServiceTest {
 	}
 
 	@Test
+	void makeHighValueTransferRemainsPendingAndRaisesReviewAlert() {
+		prepareUsers();
+		senderWallet.setBalance(new BigDecimal("10000.00"));
+		BigDecimal highValueAmount = new BigDecimal("8500.00");
+		when(passwordEncoder.matches("1234", sender.getPIN())).thenReturn(true);
+
+		Transaction result = transfer(
+				"request-1", sender.getEmail(), receiver.getEmail(), highValueAmount);
+
+		assertEquals(TransactionStatus.PENDING, result.getStatus());
+		assertEquals(new BigDecimal("1500.00"), senderWallet.getBalance());
+		verify(transactionRepo).save(result);
+		verify(fraudDetectionService).checkHighValue(senderWallet, result);
+		verify(ledgerService).recordEntry(senderWallet, result, LedgerEntryType.DEBIT,
+				LedgerEntryReason.TRANSFER, highValueAmount, "Transfer to " + receiver.getEmail());
+	}
+
+	@Test
 	void depositMoneyAddsBalanceAndRecordsCredit() {
 		when(userRepo.findByEmail(sender.getEmail())).thenReturn(Optional.of(sender));
 

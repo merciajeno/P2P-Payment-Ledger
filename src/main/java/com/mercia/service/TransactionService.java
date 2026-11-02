@@ -151,7 +151,7 @@ public class TransactionService {
 		transaction.setRemark(remark);
 
 		// Save first so the transaction has a database ID
-		transactionRepo.saveAndFlush(transaction);
+		transactionRepo.save(transaction);
 		
 		// checking if greater than 8k
 		fraudDetectionService.checkHighValue(senderWallet, transaction);

@@ -1327,6 +1327,74 @@ h1 span {
   font-size: 9px;
 }
 
+.admin-reconciliation {
+  grid-column: 1 / -1;
+  padding: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 9px;
+  background: rgba(9, 11, 14, 0.46);
+}
+
+.admin-reconciliation-passed {
+  border-color: rgba(197, 244, 106, 0.24);
+}
+
+.admin-reconciliation-mismatch {
+  border-color: rgba(255, 127, 127, 0.45);
+  background: rgba(255, 127, 127, 0.06);
+}
+
+.admin-reconciliation-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.admin-reconciliation-heading h2 {
+  margin: 0 0 6px;
+  color: #f4f4f1;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.admin-reconciliation-heading p,
+.admin-reconciliation-totals span {
+  margin: 0;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.admin-reconciliation-result {
+  flex-shrink: 0;
+  color: var(--lime);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.admin-reconciliation-mismatch .admin-reconciliation-result {
+  color: #ffaaaa;
+}
+
+.admin-reconciliation-totals {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.admin-reconciliation-totals > div {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.admin-reconciliation-totals strong {
+  color: #f4f4f1;
+  font-size: 20px;
+  font-weight: 600;
+}
+
 .admin-table {
   width: 100%;
   min-width: 700px;
@@ -1523,6 +1591,10 @@ h1 span {
 }
 
 @media (max-width: 520px) {
+  .admin-reconciliation-heading {
+    flex-direction: column;
+  }
+
   .admin-user-search {
     align-items: flex-start;
     flex-direction: column;

@@ -59,7 +59,7 @@ public class FraudDetectionService {
     public void checkHighValue(Wallet senderWallet, Transaction transaction) {
 
         if (transaction.getAmount().compareTo(HIGH_VALUE_THRESHOLD) > 0) {
-            fraudAlertSaveService.save(
+            fraudAlertSaveService.saveInCurrentTransaction(
                 senderWallet,
                 transaction,
                 FraudAlertType.HIGH_VALUE_TRANSACTION,
@@ -74,5 +74,4 @@ public class FraudDetectionService {
     }
    
 }
-
 

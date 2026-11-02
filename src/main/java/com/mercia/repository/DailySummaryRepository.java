@@ -73,29 +73,29 @@ public interface DailySummaryRepository
         """)
     java.math.BigDecimal sumTotalPendingAmount();
 
-    // Sum all DEBIT ledger entries for settled transactions
+    // Sum debit ledger entries for transactions settled in the requested window
     @Query("""
         SELECT COALESCE(SUM(le.amount), 0) FROM LedgerEntry le
         WHERE le.entryType = 'DEBIT'
         AND le.transaction IS NOT NULL
         AND le.transaction.status = 'SUCCESS'
-        AND le.createdAt >= :start
-        AND le.createdAt < :end
+        AND le.transaction.settledAt >= :start
+        AND le.transaction.settledAt < :end
         """)
     java.math.BigDecimal sumSettledDebits(
         @Param("start") Instant start,
         @Param("end") Instant end
     );
 
-    // Sum all CREDIT ledger entries for settled transactions (excluding refunds)
+    // Sum settlement credits for transactions settled in the requested window
     @Query("""
         SELECT COALESCE(SUM(le.amount), 0) FROM LedgerEntry le
         WHERE le.entryType = 'CREDIT'
         AND le.reason = 'SETTLEMENT'
         AND le.transaction IS NOT NULL
         AND le.transaction.status = 'SUCCESS'
-        AND le.createdAt >= :start
-        AND le.createdAt < :end
+        AND le.transaction.settledAt >= :start
+        AND le.transaction.settledAt < :end
         """)
     java.math.BigDecimal sumSettledCredits(
         @Param("start") Instant start,

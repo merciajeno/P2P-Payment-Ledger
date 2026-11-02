@@ -31,6 +31,8 @@ public class LedgerService {
 
     private final LedgerEntryRepository ledgerRepo;
     private static final ZoneId HISTORY_ZONE = ZoneId.of("Asia/Kolkata");
+    private static final LocalDate EARLIEST_HISTORY_DATE = LocalDate.of(1, 1, 1);
+    private static final LocalDate LATEST_HISTORY_DATE_EXCLUSIVE = LocalDate.of(10_000, 1, 1);
 
     @Transactional
     public void recordEntry(
@@ -70,8 +72,10 @@ public class LedgerService {
             LocalDate to) {
 
         Pageable pageable = PageRequest.of(page, 10);
-        Instant fromInstant = from == null ? null : from.atStartOfDay(HISTORY_ZONE).toInstant();
-        Instant toInstant = to == null ? null : to.plusDays(1).atStartOfDay(HISTORY_ZONE).toInstant();
+        Instant fromInstant = (from == null ? EARLIEST_HISTORY_DATE : from)
+                .atStartOfDay(HISTORY_ZONE).toInstant();
+        Instant toInstant = (to == null ? LATEST_HISTORY_DATE_EXCLUSIVE : to.plusDays(1))
+                .atStartOfDay(HISTORY_ZONE).toInstant();
 
         return ledgerRepo
             .findWalletHistoryFiltered(walletId, type.name(), status, fromInstant, toInstant, pageable)

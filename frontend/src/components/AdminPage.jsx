@@ -68,6 +68,31 @@ function AdminDashboard() {
       <StatCard label="Transaction volume" value={`₹${Number(data.todayTransactionVolume).toFixed(2)}`} detail="Today" />
       <StatCard label="Pending settlement" value={`₹${Number(data.totalPendingSettlementAmount).toFixed(2)}`} detail="Awaiting processing" />
       <StatCard label="Fraud alerts" value={data.pendingFraudAlertsCount} detail="Pending review" />
+      <section
+        className={`admin-reconciliation${data.reconciliationPassed ? " admin-reconciliation-passed" : " admin-reconciliation-mismatch"}`}
+        aria-labelledby="admin-reconciliation-title"
+        role={data.reconciliationPassed ? "status" : "alert"}
+      >
+        <div className="admin-reconciliation-heading">
+          <div>
+            <h2 id="admin-reconciliation-title">Today's settled reconciliation</h2>
+            <p>Debits and settlement credits for transactions settled today.</p>
+          </div>
+          <span className="admin-reconciliation-result">
+            {data.reconciliationPassed ? "Balanced" : "Mismatch detected"}
+          </span>
+        </div>
+        <div className="admin-reconciliation-totals">
+          <div>
+            <span>Total debits</span>
+            <strong>₹{Number(data.todaySettledDebits).toFixed(2)}</strong>
+          </div>
+          <div>
+            <span>Total credits</span>
+            <strong>₹{Number(data.todaySettledCredits).toFixed(2)}</strong>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

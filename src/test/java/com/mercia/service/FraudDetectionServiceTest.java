@@ -72,7 +72,8 @@ class FraudDetectionServiceTest {
 		highValue.setAmount(new BigDecimal("8000.01"));
 		service.checkHighValue(wallet, highValue);
 
-		verify(fraudAlertSaveService).save(wallet, highValue, FraudAlertType.HIGH_VALUE_TRANSACTION,
+		verify(fraudAlertSaveService).saveInCurrentTransaction(
+				wallet, highValue, FraudAlertType.HIGH_VALUE_TRANSACTION,
 				highValue.getAmount(),
 				"High-value transaction flagged for admin review: ₹8000.01");
 		verify(notificationService, never()).send(any(), any(String.class));

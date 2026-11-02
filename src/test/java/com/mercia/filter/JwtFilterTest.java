@@ -22,6 +22,7 @@ import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 
+import io.jsonwebtoken.ExpiredJwtException;
 import com.mercia.service.JwtService;
 
 import jakarta.servlet.FilterChain;
@@ -94,5 +95,21 @@ class JwtFilterTest {
 		verify(jwtService).extractUsername("signed-token");
 		verify(userDetailsService).loadUserByUsername("alice");
 		verify(filterChain).doFilter(request, response);
+	}
+
+	@Test
+	void continuesWithoutAuthenticationWhenTokenIsExpired() throws IOException, ServletException {
+		JwtFilter filter = new JwtFilter(jwtService, userDetailsService);
+		MockHttpServletRequest request = new MockHttpServletRequest("GET", "/me");
+		request.setCookies(new Cookie("token", "expired-token"));
+		MockHttpServletResponse response = new MockHttpServletResponse();
+		when(jwtService.extractUsername("expired-token"))
+				.thenThrow(new ExpiredJwtException(null, null, "Token expired"));
+
+		filter.doFilter(request, response, filterChain);
+
+		verify(filterChain).doFilter(request, response);
+		verify(userDetailsService, never()).loadUserByUsername(org.mockito.ArgumentMatchers.anyString());
+		assertNull(SecurityContextHolder.getContext().getAuthentication());
 	}
 }

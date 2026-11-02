@@ -2,6 +2,7 @@ package com.mercia.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -20,6 +21,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.ArgumentCaptor;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -28,16 +30,20 @@ import org.springframework.data.domain.PageRequest;
 import com.mercia.dto.AdminDashboardResponse;
 import com.mercia.dto.AdminTransactionResponse;
 import com.mercia.dto.AdminUserResponse;
+import com.mercia.enums.AdminAction;
 import com.mercia.enums.BatchStatus;
 import com.mercia.enums.FraudAlertStatus;
 import com.mercia.enums.FraudAlertType;
 import com.mercia.enums.TransactionStatus;
 import com.mercia.enums.WalletStatus;
 import com.mercia.model.FraudAlert;
+import com.mercia.model.AuditLog;
 import com.mercia.model.SettlementBatch;
 import com.mercia.model.Transaction;
 import com.mercia.model.User;
 import com.mercia.model.Wallet;
+import com.mercia.repository.DailySummaryRepository;
+import com.mercia.repository.AuditLogRepository;
 import com.mercia.repository.FraudAlertRepository;
 import com.mercia.repository.SettlementBatchRepository;
 import com.mercia.repository.TransactionRepository;
@@ -56,6 +62,8 @@ class AdminServiceTest {
 	@Mock
 	private TransactionRepository transactionRepo;
 	@Mock
+	private DailySummaryRepository dailySummaryRepo;
+	@Mock
 	private FraudAlertRepository fraudAlertRepo;
 	@Mock
 	private SettlementBatchRepository settlementBatchRepo;
@@ -63,6 +71,8 @@ class AdminServiceTest {
 	private SettlementService settlementService;
 	@Mock
 	private NotificationService notificationService;
+	@Mock
+	private AuditLogRepository auditLogRepo;
 
 	@InjectMocks
 	private AdminService adminService;
@@ -76,6 +86,10 @@ class AdminServiceTest {
 		when(transactionRepo.sumAmountByCreatedAtBetween(any(Instant.class), any(Instant.class)))
 				.thenReturn(new BigDecimal("125.50"));
 		when(transactionRepo.sumPendingAmount()).thenReturn(new BigDecimal("45.00"));
+		when(dailySummaryRepo.sumSettledDebits(any(Instant.class), any(Instant.class)))
+				.thenReturn(new BigDecimal("30.00"));
+		when(dailySummaryRepo.sumSettledCredits(any(Instant.class), any(Instant.class)))
+				.thenReturn(new BigDecimal("30.00"));
 		when(fraudAlertRepo.countByStatus(FraudAlertStatus.PENDING)).thenReturn(2L);
 
 		AdminDashboardResponse response = adminService.getDashboard();
@@ -86,11 +100,34 @@ class AdminServiceTest {
 		assertEquals(new BigDecimal("125.50"), response.todayTransactionVolume());
 		assertEquals(new BigDecimal("45.00"), response.totalPendingSettlementAmount());
 		assertEquals(2L, response.pendingFraudAlertsCount());
+		assertEquals(new BigDecimal("30.00"), response.todaySettledDebits());
+		assertEquals(new BigDecimal("30.00"), response.todaySettledCredits());
+		assertEquals(true, response.reconciliationPassed());
 		LocalDate today = LocalDate.now(INDIA_ZONE);
 		Instant start = today.atStartOfDay(INDIA_ZONE).toInstant();
 		Instant end = today.plusDays(1).atStartOfDay(INDIA_ZONE).toInstant();
 		verify(transactionRepo).countByCreatedAtBetween(start, end);
 		verify(transactionRepo).countByStatusAndSettledAtBetween(TransactionStatus.SUCCESS, start, end);
+		verify(dailySummaryRepo).sumSettledDebits(start, end);
+		verify(dailySummaryRepo).sumSettledCredits(start, end);
+	}
+
+	@Test
+	void getDashboardReportsReconciliationMismatch() {
+		when(transactionRepo.sumAmountByCreatedAtBetween(any(Instant.class), any(Instant.class)))
+				.thenReturn(BigDecimal.ZERO);
+		when(transactionRepo.sumPendingAmount()).thenReturn(new BigDecimal("12.00"));
+		when(dailySummaryRepo.sumSettledDebits(any(Instant.class), any(Instant.class)))
+				.thenReturn(new BigDecimal("30.00"));
+		when(dailySummaryRepo.sumSettledCredits(any(Instant.class), any(Instant.class)))
+				.thenReturn(new BigDecimal("25.00"));
+
+		AdminDashboardResponse response = adminService.getDashboard();
+
+		assertEquals(new BigDecimal("30.00"), response.todaySettledDebits());
+		assertEquals(new BigDecimal("25.00"), response.todaySettledCredits());
+		assertEquals(false, response.reconciliationPassed());
+		assertEquals(new BigDecimal("12.00"), response.totalPendingSettlementAmount());
 	}
 
 	@Test
@@ -114,28 +151,38 @@ class AdminServiceTest {
 	@Test
 	void freezeAndUnfreezeWalletUpdateAndSaveWallet() {
 		User user = user(13L, "Carol");
+		User admin = user(1L, "Admin");
 		Wallet wallet = wallet("20.00", WalletStatus.ACTIVE);
 		user.setWallet(wallet);
+		wallet.setUser(user);
 		when(userRepo.findById(13L)).thenReturn(Optional.of(user));
 
-		adminService.freezeWallet(13L);
+		adminService.freezeWallet(13L, admin);
 		assertEquals(WalletStatus.FROZEN, wallet.getWalletStatus());
 		verify(walletRepo).save(wallet);
 
-		adminService.unfreezeWallet(13L);
+		adminService.unfreezeWallet(13L, admin);
 		assertEquals(WalletStatus.ACTIVE, wallet.getWalletStatus());
 		verify(walletRepo, org.mockito.Mockito.times(2)).save(wallet);
+		ArgumentCaptor<AuditLog> auditCaptor = ArgumentCaptor.forClass(AuditLog.class);
+		verify(auditLogRepo, org.mockito.Mockito.times(2)).save(auditCaptor.capture());
+		assertAudit(auditCaptor.getAllValues().get(0), admin, AdminAction.FREEZE_WALLET,
+				13L, null, "Froze wallet for user carol@example.com");
+		assertAudit(auditCaptor.getAllValues().get(1), admin, AdminAction.UNFREEZE_WALLET,
+				13L, null, "Unfroze wallet for user carol@example.com");
 	}
 
 	@Test
 	void freezeWalletRejectsUnknownUserOrMissingWallet() {
+		User admin = user(1L, "Admin");
 		when(userRepo.findById(99L)).thenReturn(Optional.empty());
-		assertThrows(IllegalArgumentException.class, () -> adminService.freezeWallet(99L));
+		assertThrows(IllegalArgumentException.class, () -> adminService.freezeWallet(99L, admin));
 
 		User user = user(100L, "No Wallet");
 		when(userRepo.findById(100L)).thenReturn(Optional.of(user));
-		assertThrows(IllegalStateException.class, () -> adminService.freezeWallet(100L));
+		assertThrows(IllegalStateException.class, () -> adminService.freezeWallet(100L, admin));
 		verify(walletRepo, never()).save(any(Wallet.class));
+		verify(auditLogRepo, never()).save(any(AuditLog.class));
 	}
 
 	@Test
@@ -171,22 +218,27 @@ class AdminServiceTest {
 	@Test
 	void manualSettleDelegatesPendingTransactionToSettlementService() {
 		Transaction transaction = transaction(31L, TransactionStatus.PENDING);
+		User admin = user(1L, "Admin");
 		when(transactionRepo.findById(31L)).thenReturn(Optional.of(transaction));
 
-		adminService.manualSettle(31L);
+		adminService.manualSettle(31L, admin);
 
 		verify(settlementService).settleOneTransaction(transaction);
+		assertSavedAudit(admin, AdminAction.MANUAL_SETTLE, null, 31L,
+				"Manually settled transaction #31");
 	}
 
 	@Test
 	void manualSettleRejectsMissingOrNonPendingTransaction() {
 		when(transactionRepo.findById(32L)).thenReturn(Optional.empty());
-		assertThrows(IllegalArgumentException.class, () -> adminService.manualSettle(32L));
+		User admin = user(1L, "Admin");
+		assertThrows(IllegalArgumentException.class, () -> adminService.manualSettle(32L, admin));
 
 		Transaction completed = transaction(33L, TransactionStatus.SUCCESS);
 		when(transactionRepo.findById(33L)).thenReturn(Optional.of(completed));
-		assertThrows(IllegalStateException.class, () -> adminService.manualSettle(33L));
+		assertThrows(IllegalStateException.class, () -> adminService.manualSettle(33L, admin));
 		verify(settlementService, never()).settleOneTransaction(any(Transaction.class));
+		verify(auditLogRepo, never()).save(any(AuditLog.class));
 	}
 
 	@Test
@@ -211,6 +263,7 @@ class AdminServiceTest {
 	@Test
 	void blockTransactionRefundsSenderAndResolvesAlert() {
 		User sender = user(51L, "Eli");
+		User admin = user(1L, "Admin");
 		Wallet senderWallet = wallet("30.00", WalletStatus.ACTIVE);
 		senderWallet.setUser(sender);
 		Transaction transaction = transaction(52L, TransactionStatus.PENDING);
@@ -219,7 +272,7 @@ class AdminServiceTest {
 		FraudAlert alert = fraudAlert(53L, senderWallet, transaction);
 		when(fraudAlertRepo.findById(53L)).thenReturn(Optional.of(alert));
 
-		adminService.blockTransaction(53L);
+		adminService.blockTransaction(53L, admin);
 
 		assertEquals(new BigDecimal("42.50"), senderWallet.getBalance());
 		assertEquals(TransactionStatus.FAILED, transaction.getStatus());
@@ -230,6 +283,8 @@ class AdminServiceTest {
 		verify(fraudAlertRepo).save(alert);
 		verify(notificationService).send(sender,
 				"₹12.50 transfer was blocked by admin. Amount refunded to your wallet");
+		assertSavedAudit(admin, AdminAction.BLOCK_TRANSACTION, 51L, 52L,
+				"Blocked transaction #52 via alert #53");
 	}
 
 	@Test
@@ -237,26 +292,31 @@ class AdminServiceTest {
 		Wallet wallet = wallet("5.00", WalletStatus.ACTIVE);
 		FraudAlert unlinkedAlert = fraudAlert(61L, wallet, null);
 		when(fraudAlertRepo.findById(61L)).thenReturn(Optional.of(unlinkedAlert));
-		assertThrows(IllegalStateException.class, () -> adminService.blockTransaction(61L));
+		User admin = user(1L, "Admin");
+		assertThrows(IllegalStateException.class, () -> adminService.blockTransaction(61L, admin));
 
 		Transaction completed = transaction(62L, TransactionStatus.SUCCESS);
 		FraudAlert resolvedAlert = fraudAlert(63L, wallet, completed);
 		when(fraudAlertRepo.findById(63L)).thenReturn(Optional.of(resolvedAlert));
-		assertThrows(IllegalStateException.class, () -> adminService.blockTransaction(63L));
+		assertThrows(IllegalStateException.class, () -> adminService.blockTransaction(63L, admin));
 		verify(walletRepo, never()).save(any(Wallet.class));
 		verify(transactionRepo, never()).save(any(Transaction.class));
+		verify(auditLogRepo, never()).save(any(AuditLog.class));
 	}
 
 	@Test
 	void dismissAlertMarksAlertResolved() {
 		FraudAlert alert = fraudAlert(71L, wallet("4.00", WalletStatus.ACTIVE), null);
+		User admin = user(1L, "Admin");
 		when(fraudAlertRepo.findById(71L)).thenReturn(Optional.of(alert));
 
-		adminService.dismissAlert(71L);
+		adminService.dismissAlert(71L, admin);
 
 		assertEquals(FraudAlertStatus.DISMISSED, alert.getStatus());
 		assertNotNull(alert.getResolvedAt());
 		verify(fraudAlertRepo).save(alert);
+		assertSavedAudit(admin, AdminAction.DISMISS_ALERT, null, 71L,
+				"Dismissed fraud alert #71");
 	}
 
 	@Test
@@ -327,5 +387,22 @@ class AdminServiceTest {
 		alert.setDescription("Review transfer");
 		alert.setCreatedAt(Instant.parse("2025-02-01T10:00:00Z"));
 		return alert;
+	}
+
+	private void assertSavedAudit(
+			User admin, AdminAction action, Long targetUserId, Long targetEntityId, String description) {
+		ArgumentCaptor<AuditLog> auditCaptor = ArgumentCaptor.forClass(AuditLog.class);
+		verify(auditLogRepo).save(auditCaptor.capture());
+		assertAudit(auditCaptor.getValue(), admin, action, targetUserId, targetEntityId, description);
+	}
+
+	private void assertAudit(
+			AuditLog audit, User admin, AdminAction action, Long targetUserId,
+			Long targetEntityId, String description) {
+		assertSame(admin, audit.getAdmin());
+		assertEquals(action, audit.getAction());
+		assertEquals(targetUserId, audit.getTargetUserId());
+		assertEquals(targetEntityId, audit.getTargetEntityId());
+		assertEquals(description, audit.getDescription());
 	}
 }

@@ -27,7 +27,17 @@ public class FraudAlertSaveService {
 	@Transactional(propagation = Propagation.REQUIRES_NEW)
 	public void save(Wallet wallet, Transaction transaction, FraudAlertType type, BigDecimal amount,
 			String description) {
+		persistAlert(wallet, transaction, type, amount, description);
+	}
 
+	@Transactional
+	public void saveInCurrentTransaction(
+			Wallet wallet, Transaction transaction, FraudAlertType type, BigDecimal amount, String description) {
+		persistAlert(wallet, transaction, type, amount, description);
+	}
+
+	private void persistAlert(
+			Wallet wallet, Transaction transaction, FraudAlertType type, BigDecimal amount, String description) {
 		FraudAlert alert = new FraudAlert();
 		alert.setWallet(wallet);
 		alert.setTransaction(transaction);
