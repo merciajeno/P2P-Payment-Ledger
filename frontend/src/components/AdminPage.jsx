@@ -85,12 +85,22 @@ function StatCard({ label, value, detail }) {
 // ── Users ──────────────────────────────────────────────────────
 function AdminUsers() {
   const [users, setUsers] = useState([]);
+  const [userSearch, setUserSearch] = useState("");
   const [error, setError] = useState(null);
   const [msg, setMsg] = useState(null);
 
   useEffect(() => {
     fetchAdminUsers().then(setUsers).catch((e) => setError(e.message));
   }, []);
+
+  const searchTerm = userSearch.trim().toLowerCase();
+  const searchPhone = searchTerm.replace(/\D/g, "");
+  const filteredUsers = users.filter((user) => {
+    if (!searchTerm) return true;
+    const email = (user.email || "").toLowerCase();
+    const phoneNumber = (user.phoneNumber || "").replace(/\D/g, "");
+    return email.includes(searchTerm) || (searchPhone && phoneNumber.includes(searchPhone));
+  });
 
   async function handleFreeze(userId) {
     try {
@@ -115,6 +125,22 @@ function AdminUsers() {
   return (
     <>
       {msg && <p className="admin-success">{msg}</p>}
+      <div className="admin-user-search">
+        <label htmlFor="admin-user-search">Search users</label>
+        <input
+          id="admin-user-search"
+          type="search"
+          value={userSearch}
+          onChange={(event) => setUserSearch(event.target.value)}
+          placeholder="Search by email or phone number"
+          autoComplete="off"
+        />
+        {searchTerm && (
+          <span className="admin-user-search-count" aria-live="polite">
+            {filteredUsers.length} {filteredUsers.length === 1 ? "user" : "users"} found
+          </span>
+        )}
+      </div>
       <table className="admin-table">
         <thead>
           <tr>
@@ -123,9 +149,13 @@ function AdminUsers() {
           </tr>
         </thead>
         <tbody>
-          {users.length === 0 ? (
-            <tr><td colSpan={6} className="admin-empty">No users found</td></tr>
-          ) : users.map((u) => (
+          {filteredUsers.length === 0 ? (
+            <tr>
+              <td colSpan={6} className="admin-empty">
+                {searchTerm ? "No users match that email or phone number" : "No users found"}
+              </td>
+            </tr>
+          ) : filteredUsers.map((u) => (
             <tr key={u.userId}>
               <td>{u.name}</td>
               <td>{u.email}</td>

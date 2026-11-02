@@ -103,6 +103,7 @@ public class TransactionService {
 			throw new IllegalStateException("Wallet not found");
 		}
 
+		//check the wallet status for both sender and receiver
 		if(senderWallet.getWalletStatus()!=WalletStatus.ACTIVE)
 		{
 			String senderWalletException = String.format("Your wallet is:%s", senderWallet.getWalletStatus().toString());
