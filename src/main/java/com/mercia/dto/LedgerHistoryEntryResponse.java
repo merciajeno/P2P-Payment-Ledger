@@ -16,5 +16,6 @@ public record LedgerHistoryEntryResponse(
 		String description,
 		String transferType,
 		TransactionStatus status,
-		Instant settlementDueAt) {
+		Instant settlementDueAt,
+		String remark) {
 }

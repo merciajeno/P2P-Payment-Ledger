@@ -33,6 +33,10 @@ import com.mercia.repository.TransactionRepository;
 import com.mercia.repository.UserRepository;
 import com.mercia.repository.WalletRepository;
 
+
+
+
+
 @ExtendWith(MockitoExtension.class)
 class TransactionServiceTest {
 
@@ -264,10 +268,9 @@ class TransactionServiceTest {
 				"request-1", sender.getEmail(), receiver.getEmail(), highValueAmount);
 
 		assertEquals(TransactionStatus.PENDING, result.getStatus());
-		verify(dailyWalletSummaryService).checkAndRecordOutgoing(senderWallet, highValueAmount, true);
+		verify(dailyWalletSummaryService).checkAndRecordOutgoing(senderWallet, highValueAmount);
 		verify(fraudDetectionService).checkHighValue(senderWallet, result, true);
-		verify(dailyWalletSummaryService, never()).checkAndRecordOutgoing(senderWallet, highValueAmount);
-		verify(fraudDetectionService, never()).checkHighValue(senderWallet, result);
+		
 	}
 
 	@Test

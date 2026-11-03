@@ -91,7 +91,7 @@ class LedgerServiceTest {
 		assertEquals(21, result.getTotalElements());
 		assertEquals(new LedgerHistoryEntryResponse(7L, LedgerEntryType.CREDIT,
 				LedgerEntryReason.DEPOSIT, new BigDecimal("18.25"), createdAt, "Wallet deposit",
-				null, TransactionStatus.SUCCESS, null),
+				null, TransactionStatus.SUCCESS, null, null),
 				result.getContent().get(0));
 		ArgumentCaptor<org.springframework.data.domain.Pageable> pageableCaptor =
 				ArgumentCaptor.forClass(org.springframework.data.domain.Pageable.class);
@@ -116,6 +116,7 @@ class LedgerServiceTest {
 		transaction.setCreatedAt(createdAt);
 		transaction.setSettlementDueAt(dueAt);
 		transaction.setStatus(TransactionStatus.PENDING);
+		transaction.setRemark("Lunch");
 		LedgerEntry entry = new LedgerEntry();
 		entry.setId(8L);
 		entry.setWallet(wallet);
@@ -137,6 +138,7 @@ class LedgerServiceTest {
 		assertEquals("SENT", result.getContent().get(0).transferType());
 		assertEquals(TransactionStatus.PENDING, result.getContent().get(0).status());
 		assertEquals(dueAt, result.getContent().get(0).settlementDueAt());
+		assertEquals("Lunch", result.getContent().get(0).remark());
 	}
 
 	@ParameterizedTest

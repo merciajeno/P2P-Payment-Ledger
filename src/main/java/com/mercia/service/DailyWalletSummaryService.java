@@ -46,13 +46,9 @@ public class DailyWalletSummaryService {
                 });
     }
 
+    
     @Transactional
     public void checkAndRecordOutgoing(Wallet wallet, BigDecimal amount) {
-        checkAndRecordOutgoing(wallet, amount, false);
-    }
-
-    @Transactional
-    public void checkAndRecordOutgoing(Wallet wallet, BigDecimal amount, boolean friendTransfer) {
 
         DailyWalletSummary summary = getOrCreateSummary(wallet);
         BigDecimal newTotal = summary.getTotalOutgoing().add(amount);

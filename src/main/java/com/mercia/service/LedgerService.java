@@ -92,7 +92,8 @@ public class LedgerService {
                         entry.getDescription(),
                         isTransfer ? sent ? "SENT" : "RECEIVED" : null,
                         isTransfer ? transaction.getStatus() : TransactionStatus.SUCCESS,
-                        isTransfer ? transaction.getSettlementDueAt() : null);
+                        isTransfer ? transaction.getSettlementDueAt() : null,
+                        isTransfer ? transaction.getRemark() : null);
             });
     }
 }

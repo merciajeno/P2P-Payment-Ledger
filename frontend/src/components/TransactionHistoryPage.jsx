@@ -121,6 +121,7 @@ export default function TransactionHistoryPage() {
                 <div className="ledger-history-main">
                   <strong>{formatLabel(entry.reason)}</strong>
                   <span>{entry.description || formatLabel(entry.entryType)}</span>
+                  {entry.remark && <span>Remark: {entry.remark}</span>}
                   <time dateTime={entry.createdAt}>{formatDate(entry.createdAt)}</time>
                   {entry.transferType && <span>{formatLabel(entry.transferType)}</span>}
                   {entry.status && (

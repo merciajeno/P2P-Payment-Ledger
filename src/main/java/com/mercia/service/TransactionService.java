@@ -30,20 +30,19 @@ import lombok.extern.slf4j.Slf4j;
 public class TransactionService {
 
 	private static final BigDecimal MAX_FOE_TRANSFER = new BigDecimal("5000");
-	
+
 	private final TransactionRepository transactionRepo;
 	private final UserRepository userRepo;
 	private final WalletRepository walletRepo;
 	private final LedgerService ledgerService;
 	private final FraudDetectionService fraudDetectionService;
-    private final DailyWalletSummaryService dailyWalletSummaryService;
-    private final NotificationService notificationService;
-    private final PasswordEncoder passwordEncoder;
+	private final DailyWalletSummaryService dailyWalletSummaryService;
+	private final NotificationService notificationService;
+	private final PasswordEncoder passwordEncoder;
 
-    
 	@Transactional
 	public Transaction makeTransactionToOther(String senderEmail, String receiverEmail, BigDecimal amount,
-			String requestId,String pin,String remark) {
+			String requestId, String pin, String remark) {
 
 		// 1. Validate request ID
 		if (requestId == null || requestId.isBlank()) {
@@ -80,18 +79,17 @@ public class TransactionService {
 		if (sender.getStatus() != Status.ACTIVE || receiver.getStatus() != Status.ACTIVE) {
 			throw new IllegalStateException("Both users must be active");
 		}
-		
 
 		if (sender.getId().equals(receiver.getId())) {
 			throw new IllegalArgumentException("Cannot transfer money to yourself");
 		}
 		boolean friendTransfer = sender.getFriends().contains(receiver);
 		boolean foeTransfer = sender.getFoes().contains(receiver);
-      
+
 		// pin
 		// 4a. Validate transaction PIN
 		if (!passwordEncoder.matches(pin, sender.getPIN())) {
-		    throw new IllegalArgumentException("Invalid transaction PIN");
+			throw new IllegalArgumentException("Invalid transaction PIN");
 		}
 
 		// 5. Validate amount
@@ -101,7 +99,7 @@ public class TransactionService {
 		if (foeTransfer && amount.compareTo(MAX_FOE_TRANSFER) > 0) {
 			throw new IllegalArgumentException("Transfers to foes cannot exceed ₹5,000");
 		}
-	
+
 		// 6. Get wallets
 		Wallet senderWallet = sender.getWallet();
 		Wallet receiverWallet = receiver.getWallet();
@@ -110,24 +108,20 @@ public class TransactionService {
 			throw new IllegalStateException("Wallet not found");
 		}
 
-		//check the wallet status for both sender and receiver
-		if(senderWallet.getWalletStatus()!=WalletStatus.ACTIVE)
-		{
-			String senderWalletException = String.format("Your wallet is:%s", senderWallet.getWalletStatus().toString());
+		// check the wallet status for both sender and receiver
+		if (senderWallet.getWalletStatus() != WalletStatus.ACTIVE) {
+			String senderWalletException = String.format("Your wallet is:%s",
+					senderWallet.getWalletStatus().toString());
 			throw new IllegalStateException(senderWalletException);
 		}
-		
-		if(receiverWallet.getWalletStatus()!=WalletStatus.ACTIVE)
-		{
-			String receiverWalletException = String.format("Receiver wallet is:%s", senderWallet.getWalletStatus().toString());
+
+		if (receiverWallet.getWalletStatus() != WalletStatus.ACTIVE) {
+			String receiverWalletException = String.format("Receiver wallet is:%s",
+					senderWallet.getWalletStatus().toString());
 			throw new IllegalStateException(receiverWalletException);
 		}
-		fraudDetectionService.checkDuplicateTransfer(
-			    senderWallet.getId(),
-			    receiverWallet.getId(),
-			    senderWallet,
-			    amount
-			);
+		fraudDetectionService.checkDuplicateTransfer(senderWallet.getId(), receiverWallet.getId(), senderWallet,
+				amount);
 		// 7. Check available balance
 		if (senderWallet.getBalance().compareTo(amount) < 0) {
 			throw new IllegalArgumentException("Insufficient balance");
@@ -137,11 +131,9 @@ public class TransactionService {
 		senderWallet.setBalance(senderWallet.getBalance().subtract(amount));
 
 		// Update daily outgoing
-		if (friendTransfer) {
-			dailyWalletSummaryService.checkAndRecordOutgoing(senderWallet, amount, true);
-		} else {
-			dailyWalletSummaryService.checkAndRecordOutgoing(senderWallet, amount);
-		}
+
+		dailyWalletSummaryService.checkAndRecordOutgoing(senderWallet, amount);
+
 		walletRepo.save(senderWallet);
 
 		// 9. Create pending transaction
@@ -160,19 +152,16 @@ public class TransactionService {
 
 		// Save first so the transaction has a database ID
 		transactionRepo.save(transaction);
-		
+
 		// checking if greater than 8k
 		if (friendTransfer) {
 			fraudDetectionService.checkHighValue(senderWallet, transaction, true);
 		} else {
 			fraudDetectionService.checkHighValue(senderWallet, transaction);
 		}
-		//notify
-		notificationService.send(
-			    sender,
-			    "₹" + amount + " transfer to " + receiver.getName()
-			        + " initiated. Expected settlement: " + transaction.getSettlementDueAt()
-			);
+		// notify
+		notificationService.send(sender, "₹" + amount + " transfer to " + receiver.getName()
+				+ " initiated. Expected settlement: " + transaction.getSettlementDueAt());
 
 		// 10. Create sender's debit ledger entry
 		ledgerService.recordEntry(senderWallet, transaction, LedgerEntryType.DEBIT, LedgerEntryReason.TRANSFER, amount,
@@ -195,17 +184,14 @@ public class TransactionService {
 		if (userWallet.getWalletStatus() != WalletStatus.ACTIVE) {
 			throw new IllegalStateException("Wallet is not active");
 		}
-		
+
 		BigDecimal addAmount = userWallet.getBalance().add(amount);
 		userWallet.setBalance(addAmount);
 
 		ledgerService.recordEntry(userWallet, null, LedgerEntryType.CREDIT, LedgerEntryReason.DEPOSIT, amount,
 				"Wallet deposit");
-		
-		dailyWalletSummaryService.recordIncoming(
-			    userWallet,
-			    amount
-			);
+
+		dailyWalletSummaryService.recordIncoming(userWallet, amount);
 		log.info("saved to wallet");
 		walletRepo.save(userWallet);
 
@@ -234,10 +220,7 @@ public class TransactionService {
 		ledgerService.recordEntry(userWallet, null, LedgerEntryType.DEBIT, LedgerEntryReason.WITHDRAWAL, amount,
 				"Wallet withdrawal");
 		walletRepo.save(userWallet);
-		dailyWalletSummaryService.checkAndRecordOutgoing(
-			    userWallet,
-			    amount
-			);
+		dailyWalletSummaryService.checkAndRecordOutgoing(userWallet, amount);
 
 	}
 
@@ -253,3 +236,4 @@ public class TransactionService {
 		}
 	}
 }
+

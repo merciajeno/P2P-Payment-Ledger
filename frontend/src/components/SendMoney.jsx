@@ -13,6 +13,7 @@ export default function SendMoney({ onBack, onBalanceChange, onSessionExpired })
   const [searchingRecipient, setSearchingRecipient] = useState(false);
   const [recipientSearchMessage, setRecipientSearchMessage] = useState("");
   const [amount, setAmount] = useState("");
+  const [remark, setRemark] = useState("");
   const [pin, setPin] = useState("");
   const [payment, setPayment] = useState(null);
   const [status, setStatus] = useState(null);
@@ -35,7 +36,8 @@ export default function SendMoney({ onBack, onBalanceChange, onSessionExpired })
           typeof restored.requestId !== "string" ||
           body.requestId !== restored.requestId ||
           typeof body.receiverEmail !== "string" ||
-          typeof body.amount !== "number"
+          typeof body.amount !== "number" ||
+          (body.remark !== undefined && body.remark !== null && typeof body.remark !== "string")
         ) {
           throw new Error("Saved payment data is invalid.");
         }
@@ -43,6 +45,7 @@ export default function SendMoney({ onBack, onBalanceChange, onSessionExpired })
         setPayment(restored);
         setReceiverEmail(body.receiverEmail);
         setAmount(String(body.amount));
+        setRemark(body.remark || "");
         setNotice("An earlier payment has an unknown result. Retry it to recover its status.");
       }
     } catch (error) {
@@ -92,6 +95,7 @@ export default function SendMoney({ onBack, onBalanceChange, onSessionExpired })
       setReceiverEmail("");
       setRecipient(null);
       setAmount("");
+      setRemark("");
       setPin("");
       setReviewing(false);
       setEnteringPin(false);
@@ -119,6 +123,7 @@ export default function SendMoney({ onBack, onBalanceChange, onSessionExpired })
       requestId,
       receiverEmail: receiverEmail.trim(),
       amount: Number(amount),
+      remark: remark.trim() || null,
       pin,  // included in body sent to backend
     });
 
@@ -144,6 +149,7 @@ export default function SendMoney({ onBack, onBalanceChange, onSessionExpired })
     setReceiverEmail("");
     setRecipient(null);
     setAmount("");
+    setRemark("");
     setPin("");
     setReviewing(false);
     setEnteringPin(false);
@@ -217,6 +223,7 @@ export default function SendMoney({ onBack, onBalanceChange, onSessionExpired })
             Confirm sending <strong>₹{Number(amount).toFixed(2)}</strong> to{" "}
             <strong>{receiverEmail.trim()}</strong>
           </p>
+          {remark.trim() && <p>Remark: <strong>{remark.trim()}</strong></p>}
           <Field
             label="Transaction PIN"
             type="password"
@@ -256,6 +263,7 @@ export default function SendMoney({ onBack, onBalanceChange, onSessionExpired })
             Send <strong>₹{Number(amount).toFixed(2)}</strong> to{" "}
             <strong>{receiverEmail.trim()}</strong>?
           </p>
+          {remark.trim() && <p>Remark: <strong>{remark.trim()}</strong></p>}
           <button
             type="button"
             className="submit-button"
@@ -333,6 +341,15 @@ export default function SendMoney({ onBack, onBalanceChange, onSessionExpired })
             onChange={(e) => setAmount(e.target.value)}
             placeholder="0.00"
             required
+          />
+          <Field
+            label="Remark (optional)"
+            type="text"
+            maxLength={200}
+            value={remark}
+            onChange={(e) => setRemark(e.target.value)}
+            placeholder="What is this transfer for?"
+            hint={`${remark.length}/200 characters`}
           />
           <button type="submit" className="submit-button" disabled={!recipient}>
             Review payment
