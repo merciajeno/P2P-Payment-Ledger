@@ -18,6 +18,8 @@ frontend is a React application built with Vite.
 - Pending transfers with scheduled settlement, status updates, and refunds for
   failed or declined settlements.
 - Paginated transaction history with date, sent/received, and status filters.
+- Personal stats showing successful sent/received totals and this month's
+  transaction count.
 - Notifications for account and transaction activity.
 - Duplicate-transfer detection, a daily outgoing limit, and high-value transfer
   alerts.

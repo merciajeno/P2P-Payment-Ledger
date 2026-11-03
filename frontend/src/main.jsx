@@ -5,6 +5,7 @@ import AuthPage from "./components/AuthPage";
 import MainNavigation from "./components/MainNavigation";
 import SendMoney from "./components/SendMoney";
 import TransactionHistoryPage from "./components/TransactionHistoryPage";
+import UserStatsPage from "./components/UserStatsPage";
 import WalletActions from "./components/WalletActions";
 import WalletPage from "./components/WalletPage";
 import { fetchCurrentUser, fetchWalletBalance, logoutUser } from "./api";
@@ -23,7 +24,7 @@ function App() {
   const [isCheckingSession, setIsCheckingSession] = useState(true);
   const [notice, setNotice] = useState(null);
   const isAuthPage = ["/", "/login", "/signup"].includes(path);
-  const isProtectedPage = ["/admin", "/wallet", "/manage-money", "/send-money", "/history"].includes(path);
+  const isProtectedPage = ["/admin", "/wallet", "/manage-money", "/send-money", "/history", "/stats"].includes(path);
 
   function navigate(nextPath) {
     if (window.location.pathname !== nextPath) {
@@ -167,6 +168,8 @@ function App() {
         />
       ) : currentUser?.role === "USER" && path === "/history" ? (
         <TransactionHistoryPage />
+      ) : currentUser?.role === "USER" && path === "/stats" ? (
+        <UserStatsPage />
       ) : currentUser?.role === "USER" && path === "/wallet" ? (
         <WalletPage
           balance={walletBalance}

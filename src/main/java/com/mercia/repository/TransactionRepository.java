@@ -53,6 +53,22 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
 	@Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t WHERE t.status = 'PENDING'")
 	BigDecimal sumPendingAmount();
 
+	@Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t WHERE t.senderWallet.id = :walletId AND t.status = :status")
+	BigDecimal sumAmountBySenderWalletIdAndStatus(@Param("walletId") Long walletId,
+			@Param("status") TransactionStatus status);
+
+	@Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t WHERE t.receiverWallet.id = :walletId AND t.status = :status")
+	BigDecimal sumAmountByReceiverWalletIdAndStatus(@Param("walletId") Long walletId,
+			@Param("status") TransactionStatus status);
+
+	@Query("""
+			SELECT COUNT(t) FROM Transaction t
+			WHERE (t.senderWallet.id = :walletId OR t.receiverWallet.id = :walletId)
+			AND t.createdAt >= :start AND t.createdAt < :end
+			""")
+	long countByWalletIdAndCreatedAtBetween(@Param("walletId") Long walletId,
+			@Param("start") Instant start, @Param("end") Instant end);
+
 	// All transactions newest first — for admin monitoring
 	Page<Transaction> findAllByOrderByCreatedAtDesc(Pageable pageable);
 

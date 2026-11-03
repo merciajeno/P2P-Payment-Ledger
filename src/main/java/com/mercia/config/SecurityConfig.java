@@ -24,6 +24,7 @@ public class SecurityConfig {
 	    .requestMatchers("/wallet/**").hasRole("USER")
 	    .requestMatchers("/api/ledger/**").hasRole("USER")
 	    .requestMatchers("/transactions", "/transactions/**").hasRole("USER")
+	    .requestMatchers("/users/stats").hasRole("USER")
 	    .requestMatchers("/users/search").hasRole("USER")
 	    .requestMatchers("/notifications/**").authenticated()
 	    .requestMatchers("/admin/**").hasRole("ADMIN")

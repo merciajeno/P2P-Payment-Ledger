@@ -9,6 +9,7 @@ export default function MainNavigation({ path, isAuthenticated, userRole, naviga
   const isWalletActionsPage = path === "/manage-money";
   const isSendMoneyPage = path === "/send-money";
   const isHistoryPage = path === "/history";
+  const isStatsPage = path === "/stats";
 
   return (
     <header className="topbar">
@@ -71,6 +72,17 @@ export default function MainNavigation({ path, isAuthenticated, userRole, naviga
               }}
             >
               History
+            </a>
+            <a
+              className={isStatsPage ? "nav-link nav-link-active" : "nav-link"}
+              href="/stats"
+              aria-current={isStatsPage ? "page" : undefined}
+              onClick={(event) => {
+                event.preventDefault();
+                navigate("/stats");
+              }}
+            >
+              Stats
             </a>
           </>
         )}

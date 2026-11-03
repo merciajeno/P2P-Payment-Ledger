@@ -139,6 +139,24 @@ export async function fetchLedgerHistory(page = 0, filters = {}) {
   }
 }
 
+export async function fetchUserStats() {
+  try {
+    const response = await api.get("/users/stats");
+    const stats = response.data;
+    if (
+      !stats
+      || !Number.isFinite(Number(stats.totalSent))
+      || !Number.isFinite(Number(stats.totalReceived))
+      || !Number.isInteger(stats.transactionsThisMonth)
+    ) {
+      throw new Error("The server returned invalid personal statistics.");
+    }
+    return stats;
+  } catch (error) {
+    throw new Error(getErrorMessage(error, "Could not load your personal statistics."));
+  }
+}
+
 export async function searchUser(query) {
   try {
     const response = await api.get("/users/search", { params: { query } });
