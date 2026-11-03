@@ -93,6 +93,7 @@ class SettlementServiceTest {
 				org.mockito.ArgumentMatchers.eq(TransactionStatus.PENDING), any(Instant.class)))
 				.thenReturn(List.of(transaction));
 
+		
 		settlementService.settleDueTransactions();
 
 		assertEquals(new BigDecimal("130.00"), transaction.getSenderWallet().getBalance());
@@ -103,6 +104,7 @@ class SettlementServiceTest {
 		verify(ledgerService).recordEntry(transaction.getSenderWallet(), transaction,
 				com.mercia.enums.LedgerEntryType.CREDIT, com.mercia.enums.LedgerEntryReason.REFUND,
 				transaction.getAmount(), "Transfer refund - receiver wallet is inactive");
+		
 	}
 
 	@Test
