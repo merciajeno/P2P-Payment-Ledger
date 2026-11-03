@@ -15,6 +15,10 @@ frontend is a React application built with Vite.
 - Wallet balance, deposits, and withdrawals.
 - Transfers to users found by email or phone number, protected by a transaction
   PIN.
+- One-way friend lists; transfers over ₹8,000 to a friend skip the high-value
+  fraud alert, and the daily outgoing limit for those transfers is ₹75,000.
+- One-way foe lists; transfers to a foe are limited to ₹5,000 per transaction.
+  A recipient can be marked as a friend or a foe, but not both.
 - Pending transfers with scheduled settlement, status updates, and refunds for
   failed or declined settlements.
 - Paginated transaction history with date, sent/received, and status filters.

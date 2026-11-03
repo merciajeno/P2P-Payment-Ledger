@@ -28,6 +28,8 @@ import lombok.extern.slf4j.Slf4j;
 @AllArgsConstructor
 @Slf4j
 public class TransactionService {
+
+	private static final BigDecimal MAX_FOE_TRANSFER = new BigDecimal("5000");
 	
 	private final TransactionRepository transactionRepo;
 	private final UserRepository userRepo;
@@ -83,6 +85,8 @@ public class TransactionService {
 		if (sender.getId().equals(receiver.getId())) {
 			throw new IllegalArgumentException("Cannot transfer money to yourself");
 		}
+		boolean friendTransfer = sender.getFriends().contains(receiver);
+		boolean foeTransfer = sender.getFoes().contains(receiver);
       
 		// pin
 		// 4a. Validate transaction PIN
@@ -93,6 +97,9 @@ public class TransactionService {
 		// 5. Validate amount
 		if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
 			throw new IllegalArgumentException("Amount must be greater than zero");
+		}
+		if (foeTransfer && amount.compareTo(MAX_FOE_TRANSFER) > 0) {
+			throw new IllegalArgumentException("Transfers to foes cannot exceed ₹5,000");
 		}
 	
 		// 6. Get wallets
@@ -130,10 +137,11 @@ public class TransactionService {
 		senderWallet.setBalance(senderWallet.getBalance().subtract(amount));
 
 		// Update daily outgoing
-		dailyWalletSummaryService.checkAndRecordOutgoing(
-		    senderWallet,
-		    amount
-		);
+		if (friendTransfer) {
+			dailyWalletSummaryService.checkAndRecordOutgoing(senderWallet, amount, true);
+		} else {
+			dailyWalletSummaryService.checkAndRecordOutgoing(senderWallet, amount);
+		}
 		walletRepo.save(senderWallet);
 
 		// 9. Create pending transaction
@@ -154,7 +162,11 @@ public class TransactionService {
 		transactionRepo.save(transaction);
 		
 		// checking if greater than 8k
-		fraudDetectionService.checkHighValue(senderWallet, transaction);
+		if (friendTransfer) {
+			fraudDetectionService.checkHighValue(senderWallet, transaction, true);
+		} else {
+			fraudDetectionService.checkHighValue(senderWallet, transaction);
+		}
 		//notify
 		notificationService.send(
 			    sender,

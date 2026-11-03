@@ -253,6 +253,42 @@ class TransactionServiceTest {
 	}
 
 	@Test
+	void makeHighValueTransferToFriendUsesFriendThresholds() {
+		prepareUsers();
+		sender.getFriends().add(receiver);
+		senderWallet.setBalance(new BigDecimal("10000.00"));
+		BigDecimal highValueAmount = new BigDecimal("8500.00");
+		when(passwordEncoder.matches("1234", sender.getPIN())).thenReturn(true);
+
+		Transaction result = transfer(
+				"request-1", sender.getEmail(), receiver.getEmail(), highValueAmount);
+
+		assertEquals(TransactionStatus.PENDING, result.getStatus());
+		verify(dailyWalletSummaryService).checkAndRecordOutgoing(senderWallet, highValueAmount, true);
+		verify(fraudDetectionService).checkHighValue(senderWallet, result, true);
+		verify(dailyWalletSummaryService, never()).checkAndRecordOutgoing(senderWallet, highValueAmount);
+		verify(fraudDetectionService, never()).checkHighValue(senderWallet, result);
+	}
+
+	@Test
+	void makeTransferToFoeAllowsFiveThousandButRejectsMore() {
+		prepareUsers();
+		sender.getFoes().add(receiver);
+		senderWallet.setBalance(new BigDecimal("10000.00"));
+		when(passwordEncoder.matches("1234", sender.getPIN())).thenReturn(true);
+
+		Transaction result = transfer(
+				"request-1", sender.getEmail(), receiver.getEmail(), new BigDecimal("5000.00"));
+
+		assertEquals(TransactionStatus.PENDING, result.getStatus());
+
+		when(transactionRepo.findByRequestId("request-2")).thenReturn(Optional.empty());
+		assertThrows(IllegalArgumentException.class,
+				() -> transfer("request-2", sender.getEmail(), receiver.getEmail(),
+						new BigDecimal("5000.01")));
+	}
+
+	@Test
 	void depositMoneyAddsBalanceAndRecordsCredit() {
 		when(userRepo.findByEmail(sender.getEmail())).thenReturn(Optional.of(sender));
 

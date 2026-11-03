@@ -48,9 +48,15 @@ public class DailyWalletSummaryService {
 
     @Transactional
     public void checkAndRecordOutgoing(Wallet wallet, BigDecimal amount) {
+        checkAndRecordOutgoing(wallet, amount, false);
+    }
+
+    @Transactional
+    public void checkAndRecordOutgoing(Wallet wallet, BigDecimal amount, boolean friendTransfer) {
 
         DailyWalletSummary summary = getOrCreateSummary(wallet);
         BigDecimal newTotal = summary.getTotalOutgoing().add(amount);
+        String limitMessage = "Daily outgoing limit of ₹50,000 exceeded";
 
         if (newTotal.compareTo(DAILY_LIMIT) > 0) {
             // Saved in its own transaction via REQUIRES_NEW
@@ -60,12 +66,12 @@ public class DailyWalletSummaryService {
                 null,
                 FraudAlertType.DAILY_LIMIT_EXCEEDED,
                 amount,
-                "Daily outgoing limit of ₹50,000 exceeded"
+                limitMessage
             );
             
             notificationService.send(wallet.getUser(),
             	    "Transaction blocked: daily limit exceeded");
-            throw new IllegalArgumentException("Daily outgoing limit of ₹50,000 exceeded");
+            throw new IllegalArgumentException(limitMessage);
         }
 
         summary.setTotalOutgoing(newTotal);

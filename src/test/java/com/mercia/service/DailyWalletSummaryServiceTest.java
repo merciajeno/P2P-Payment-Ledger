@@ -88,6 +88,35 @@ class DailyWalletSummaryServiceTest {
 	}
 
 	@Test
+	void checkAndRecordFriendOutgoingAllowsTotalUpToSeventyFiveThousand() {
+		Wallet wallet = wallet(37L);
+		DailyWalletSummary existing = summary(wallet, "0.00", "70000.00");
+		when(summaryRepo.findByWalletIdAndSummaryDate(eq(37L), any(LocalDate.class)))
+				.thenReturn(Optional.of(existing));
+
+		dailyWalletSummaryService.checkAndRecordOutgoing(wallet, new BigDecimal("5000.00"), true);
+
+		assertEquals(new BigDecimal("75000.00"), existing.getTotalOutgoing());
+		verify(summaryRepo).save(existing);
+	}
+
+	@Test
+	void checkAndRecordFriendOutgoingRejectsTotalAboveSeventyFiveThousand() {
+		Wallet wallet = wallet(38L);
+		DailyWalletSummary existing = summary(wallet, "0.00", "74999.00");
+		when(summaryRepo.findByWalletIdAndSummaryDate(eq(38L), any(LocalDate.class)))
+				.thenReturn(Optional.of(existing));
+		BigDecimal amount = new BigDecimal("1.01");
+
+		assertThrows(IllegalArgumentException.class,
+				() -> dailyWalletSummaryService.checkAndRecordOutgoing(wallet, amount, true));
+
+		verify(fraudAlertSaveService).save(wallet, null, FraudAlertType.DAILY_LIMIT_EXCEEDED,
+				amount, "Daily outgoing limit of ₹75,000 exceeded");
+		verify(summaryRepo, never()).save(existing);
+	}
+
+	@Test
 	void checkAndRecordOutgoingRaisesAlertAndRejectsAmountAboveDailyLimit() {
 		Wallet wallet = wallet(34L);
 		DailyWalletSummary existing = summary(wallet, "0.00", "49999.00");

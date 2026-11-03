@@ -57,8 +57,11 @@ public class FraudDetectionService {
  // Called AFTER transaction is saved — so transaction has an ID to link to
     // Does NOT block — transaction proceeds to PENDING, just raises an alert
     public void checkHighValue(Wallet senderWallet, Transaction transaction) {
+     checkHighValue(senderWallet, transaction, false);
+ }
 
-        if (transaction.getAmount().compareTo(HIGH_VALUE_THRESHOLD) > 0) {
+ public void checkHighValue(Wallet senderWallet, Transaction transaction, boolean friendTransfer) {
+     if (!friendTransfer && transaction.getAmount().compareTo(HIGH_VALUE_THRESHOLD) > 0) {
             fraudAlertSaveService.saveInCurrentTransaction(
                 senderWallet,
                 transaction,
@@ -74,4 +77,3 @@ public class FraudDetectionService {
     }
    
 }
-

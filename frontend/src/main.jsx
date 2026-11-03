@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import AdminPage from "./components/AdminPage";
 import AuthPage from "./components/AuthPage";
+import FoesPage from "./components/FoesPage";
+import FriendsPage from "./components/FriendsPage";
 import MainNavigation from "./components/MainNavigation";
 import SendMoney from "./components/SendMoney";
 import TransactionHistoryPage from "./components/TransactionHistoryPage";
@@ -24,7 +26,7 @@ function App() {
   const [isCheckingSession, setIsCheckingSession] = useState(true);
   const [notice, setNotice] = useState(null);
   const isAuthPage = ["/", "/login", "/signup"].includes(path);
-  const isProtectedPage = ["/admin", "/wallet", "/manage-money", "/send-money", "/history", "/stats"].includes(path);
+  const isProtectedPage = ["/admin", "/wallet", "/manage-money", "/send-money", "/history", "/stats", "/friends", "/foes"].includes(path);
 
   function navigate(nextPath) {
     if (window.location.pathname !== nextPath) {
@@ -170,6 +172,10 @@ function App() {
         <TransactionHistoryPage />
       ) : currentUser?.role === "USER" && path === "/stats" ? (
         <UserStatsPage />
+      ) : currentUser?.role === "USER" && path === "/friends" ? (
+        <FriendsPage />
+      ) : currentUser?.role === "USER" && path === "/foes" ? (
+        <FoesPage />
       ) : currentUser?.role === "USER" && path === "/wallet" ? (
         <WalletPage
           balance={walletBalance}

@@ -1,6 +1,8 @@
 package com.mercia.model;
 
 import java.time.Instant;
+import java.util.HashSet;
+import java.util.Set;
 
 import com.mercia.enums.Role;
 import com.mercia.enums.Status;
@@ -12,6 +14,9 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.ManyToMany;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
@@ -44,6 +49,22 @@ public class User {
 
 	@OneToOne(mappedBy = "user")
 	private Wallet wallet;
+
+	@ManyToMany
+	@JoinTable(
+			name = "user_friends",
+			joinColumns = @JoinColumn(name = "user_id"),
+			inverseJoinColumns = @JoinColumn(name = "friend_id")
+	)
+	private Set<User> friends = new HashSet<>();
+
+	@ManyToMany
+	@JoinTable(
+			name = "user_foes",
+			joinColumns = @JoinColumn(name = "user_id"),
+			inverseJoinColumns = @JoinColumn(name = "foe_id")
+	)
+	private Set<User> foes = new HashSet<>();
 	
 	@Column(name = "created_at", nullable = false, updatable = false)
 	private Instant createdAt;

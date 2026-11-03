@@ -173,6 +173,82 @@ export async function searchUser(query) {
   }
 }
 
+export async function fetchFriends() {
+  try {
+    const response = await api.get("/users/friends");
+    if (
+      !Array.isArray(response.data)
+      || response.data.some((friend) =>
+        !friend || typeof friend.name !== "string" || typeof friend.email !== "string"
+      )
+    ) {
+      throw new Error("The server returned an invalid friends list.");
+    }
+    return response.data;
+  } catch (error) {
+    throw new Error(getErrorMessage(error, "Could not load your friends."));
+  }
+}
+
+export async function addFriend(email) {
+  try {
+    const response = await api.post("/users/friends", { email });
+    const friend = response.data;
+    if (!friend || typeof friend.name !== "string" || typeof friend.email !== "string") {
+      throw new Error("The server returned an invalid friend.");
+    }
+    return friend;
+  } catch (error) {
+    throw new Error(getErrorMessage(error, "Could not add this friend."));
+  }
+}
+
+export async function removeFriend(email) {
+  try {
+    await api.delete("/users/friends", { params: { email } });
+  } catch (error) {
+    throw new Error(getErrorMessage(error, "Could not remove this friend."));
+  }
+}
+
+export async function fetchFoes() {
+  try {
+    const response = await api.get("/users/foes");
+    if (
+      !Array.isArray(response.data)
+      || response.data.some((foe) =>
+        !foe || typeof foe.name !== "string" || typeof foe.email !== "string"
+      )
+    ) {
+      throw new Error("The server returned an invalid foes list.");
+    }
+    return response.data;
+  } catch (error) {
+    throw new Error(getErrorMessage(error, "Could not load your foes."));
+  }
+}
+
+export async function addFoe(email) {
+  try {
+    const response = await api.post("/users/foes", { email });
+    const foe = response.data;
+    if (!foe || typeof foe.name !== "string" || typeof foe.email !== "string") {
+      throw new Error("The server returned an invalid foe.");
+    }
+    return foe;
+  } catch (error) {
+    throw new Error(getErrorMessage(error, "Could not add this foe."));
+  }
+}
+
+export async function removeFoe(email) {
+  try {
+    await api.delete("/users/foes", { params: { email } });
+  } catch (error) {
+    throw new Error(getErrorMessage(error, "Could not remove this foe."));
+  }
+}
+
 export async function fetchUnreadCount() {
   try {
     const response = await api.get("/notifications/unread-count");

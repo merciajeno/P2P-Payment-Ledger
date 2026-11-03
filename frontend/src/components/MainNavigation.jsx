@@ -10,6 +10,8 @@ export default function MainNavigation({ path, isAuthenticated, userRole, naviga
   const isSendMoneyPage = path === "/send-money";
   const isHistoryPage = path === "/history";
   const isStatsPage = path === "/stats";
+  const isFriendsPage = path === "/friends";
+  const isFoesPage = path === "/foes";
 
   return (
     <header className="topbar">
@@ -83,6 +85,28 @@ export default function MainNavigation({ path, isAuthenticated, userRole, naviga
               }}
             >
               Stats
+            </a>
+            <a
+              className={isFriendsPage ? "nav-link nav-link-active" : "nav-link"}
+              href="/friends"
+              aria-current={isFriendsPage ? "page" : undefined}
+              onClick={(event) => {
+                event.preventDefault();
+                navigate("/friends");
+              }}
+            >
+              Friends
+            </a>
+            <a
+              className={isFoesPage ? "nav-link nav-link-active" : "nav-link"}
+              href="/foes"
+              aria-current={isFoesPage ? "page" : undefined}
+              onClick={(event) => {
+                event.preventDefault();
+                navigate("/foes");
+              }}
+            >
+              Foes
             </a>
           </>
         )}

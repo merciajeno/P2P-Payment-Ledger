@@ -26,6 +26,8 @@ public class SecurityConfig {
 	    .requestMatchers("/transactions", "/transactions/**").hasRole("USER")
 	    .requestMatchers("/users/stats").hasRole("USER")
 	    .requestMatchers("/users/search").hasRole("USER")
+	    .requestMatchers("/users/friends").hasRole("USER")
+	    .requestMatchers("/users/foes", "/users/foes/**").hasRole("USER")
 	    .requestMatchers("/notifications/**").authenticated()
 	    .requestMatchers("/admin/**").hasRole("ADMIN")
 	    .requestMatchers("/me").authenticated()

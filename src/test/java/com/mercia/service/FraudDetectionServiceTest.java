@@ -95,6 +95,20 @@ class FraudDetectionServiceTest {
 		verify(fraudAlertSaveService, never()).save(any(), any(), any(), any(), any());
 	}
 
+	@Test
+	void checkHighValueDoesNotCreateAlertForFriendTransfer() {
+		FraudDetectionService service = new FraudDetectionService(
+				transactionRepo, fraudAlertSaveService, notificationService);
+		Wallet wallet = wallet();
+		Transaction highValue = new Transaction();
+		highValue.setAmount(new BigDecimal("8000.01"));
+
+		service.checkHighValue(wallet, highValue, true);
+
+		verify(fraudAlertSaveService, never())
+				.saveInCurrentTransaction(any(), any(), any(), any(), any());
+	}
+
 	private Wallet wallet() {
 		User user = new User();
 		user.setEmail("sender@example.com");
