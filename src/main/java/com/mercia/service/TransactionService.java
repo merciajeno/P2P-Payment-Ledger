@@ -120,6 +120,16 @@ public class TransactionService {
 					senderWallet.getWalletStatus().toString());
 			throw new IllegalStateException(receiverWalletException);
 		}
+	
+		if (foeTransfer) {
+		    BigDecimal requiredFoeBalance = amount.multiply(new BigDecimal("2"));
+		    if (receiverWallet.getBalance().compareTo(requiredFoeBalance) < 0) {
+		        throw new IllegalArgumentException(
+		            "Transfer not allowed: the recipient does not have sufficient balance to cover a potential repayment (requires 2× the transfer amount)."
+		        );
+		    }
+		}
+
 		fraudDetectionService.checkDuplicateTransfer(senderWallet.getId(), receiverWallet.getId(), senderWallet,
 				amount);
 		// 7. Check available balance
