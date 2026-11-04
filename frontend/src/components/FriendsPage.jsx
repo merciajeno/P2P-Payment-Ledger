@@ -69,7 +69,6 @@ export default function FriendsPage() {
       <h1>Friends</h1>
       <p className="friends-description">
         Friend transfers over ₹8,000 won’t trigger a high-value fraud alert.
-        Your daily outgoing limit for friend transfers is ₹75,000.
       </p>
 
       <form className="auth-form" onSubmit={handleAddFriend}>
